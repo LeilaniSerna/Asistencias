@@ -1,0 +1,23 @@
+<ion-content [fullscreen]="true" class="login-container">
+  <div class="login-card">
+    <img src="assets/icon/logo.png" class="logo" alt="Logo">
+
+    <ion-input
+      placeholder="Usuario"
+      type="email"
+      [(ngModel)]="correo"
+      label="Correo:"
+      labelPlacement="floating"
+    ></ion-input>
+
+    <ion-input
+      placeholder="Contraseña"
+      type="password"
+      [(ngModel)]="contrasena"
+      label="Contraseña:"
+      labelPlacement="floating"
+    ></ion-input>
+
+    <ion-button expand="block" (click)="onLogin()">Iniciar sesión</ion-button>
+  </div>
+</ion-content>

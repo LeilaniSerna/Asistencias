@@ -1,0 +1,32 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-title>Materias del grupo {{ grupoNombre }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <h2>Materias asignadas</h2>
+
+  <div class="cards-container">
+    <ion-card *ngFor="let materia of materias">
+      <ion-card-header (click)="toggleExpandir(materia.nombre)" style="cursor: pointer">
+        <ion-card-title>{{ materia.nombre }}</ion-card-title>
+      </ion-card-header>
+
+      <div *ngIf="materiaExpandida === materia.nombre" class="materia-expandida">
+        <ion-item *ngFor="let horario of materia.horarios">
+          <ion-label>
+            <strong>{{ horario }}</strong>
+          </ion-label>
+          <ion-button slot="end" (click)="irALista(materia.nombre, horario)">
+            Ver lista
+          </ion-button>
+        </ion-item>
+      </div>
+    </ion-card>
+  </div>
+
+  <div *ngIf="materias.length === 0">
+    <p>No hay materias asignadas para este grupo.</p>
+  </div>
+</ion-content>

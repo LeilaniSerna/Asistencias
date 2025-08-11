@@ -1,0 +1,71 @@
+<ion-header [translucent]="true">
+  <ion-toolbar>
+    <ion-title>Lista de Alumnos</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true" class="ion-padding">
+  <ion-header collapse="condense">
+    <ion-toolbar>
+      <ion-title size="large">Lista de Alumnos</ion-title>
+    </ion-toolbar>
+  </ion-header>
+
+  <h2>{{ grupoNombre }}</h2>
+  <h3>{{ materiaNombre }}</h3>
+  <p>{{ horario }}</p>
+
+  <ion-grid>
+    <ion-row>
+      <ion-col><strong>Alumno</strong></ion-col>
+      <ion-col><strong>Solicitud de asistencia</strong></ion-col>
+      <ion-col><strong>Acciones</strong></ion-col>
+    </ion-row>
+
+    <ion-row *ngFor="let alumno of alumnos">
+      <ion-col>{{ alumno.nombre }}</ion-col>
+      <ion-col>Asistencia: {{ alumno.estado }}</ion-col>
+      <ion-col>
+        <!-- ✅ Mostrar acciones SOLO si estamos dentro del horario -->
+        <ng-container *ngIf="dentroHorario; else fueraHorario">
+          <!-- Botones Aceptar/Rechazar solo si hay solicitud -->
+          <ion-button
+            color="success"
+            size="small"
+            (click)="aceptarSolicitud(alumno.solicitud_id)"
+            [disabled]="alumno.estado !== 'Pendiente'"
+            *ngIf="alumno.estado !== 'Sin solicitud'"
+          >
+            Aceptar
+          </ion-button>
+          <ion-button
+            color="danger"
+            size="small"
+            (click)="rechazarSolicitud(alumno.solicitud_id)"
+            [disabled]="alumno.estado !== 'Pendiente'"
+            *ngIf="alumno.estado !== 'Sin solicitud'"
+          >
+            Rechazar
+          </ion-button>
+
+          <!-- ✅ Botón de asistencia manual (usando la función para validar) -->
+          <ion-button
+            color="tertiary"
+            size="small"
+            *ngIf="mostrarBotonAsistenciaManual(alumno)"
+            (click)="registrarAsistenciaManual(alumno)"
+          >
+            Registrar asistencia manual
+          </ion-button>
+        </ng-container>
+
+        <!-- ❌ Mensaje cuando está fuera del horario -->
+        <ng-template #fueraHorario>
+          <ion-text color="medium">
+            Fuera del horario de la materia
+          </ion-text>
+        </ng-template>
+      </ion-col>
+    </ion-row>
+  </ion-grid>
+</ion-content>

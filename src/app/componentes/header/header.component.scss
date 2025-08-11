@@ -1,0 +1,18 @@
+ion-buttons[slot="end"] {
+  grid-area: end !important;
+  order: 1 !important;
+}
+
+:host {
+  position: absolute;
+  right: var(--ion-safe-area-end, 16px);
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+}
+
+:host {
+  ion-icon {
+    color: #fff !important;
+  }
+}

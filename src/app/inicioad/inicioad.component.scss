@@ -1,0 +1,30 @@
+ion-content {
+  --background: #f4f5f8;
+
+  h2 {
+    font-size: 1.8rem;
+    font-weight: bold;
+    text-align: center;
+    margin-top: 1.5rem;
+    margin-bottom: 1rem;
+    color: #222;
+  }
+
+  ion-list {
+    margin-top: 1rem;
+  }
+
+  ion-item {
+    --background: #fff;
+    --border-color: #ccc;
+    margin-bottom: 0.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+
+    ion-label {
+      font-size: 1.1rem;
+      font-weight: 500;
+      color: #333;
+    }
+  }
+}

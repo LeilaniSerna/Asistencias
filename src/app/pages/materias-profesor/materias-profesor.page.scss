@@ -1,0 +1,141 @@
+:host {
+  display: block;
+  background-color: #ffffff;
+}
+
+/* Encabezado */
+ion-header {
+  --background: #ffffff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+}
+
+ion-toolbar::part(background),
+ion-toolbar .toolbar-background {
+  background-color: #9fc34c;
+}
+
+ion-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: white;
+}
+
+/* Contenido */
+ion-content {
+  --background: #fbfbfb;
+  padding: 1rem;
+}
+
+/* Título de sección */
+h2 {
+  text-align: center;
+  font-size: 1.4rem;
+  font-weight: bold;
+  color: #004aad;
+  margin-top: 1.5rem;
+  margin-bottom: 50px;
+}
+
+/* Contenedor grid de tarjetas: siempre 2 columnas */
+.cards-container {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  margin-top: 1rem;
+  padding: 0 0.5rem;
+}
+
+/* Ajuste de cada tarjeta dentro del grid */
+.cards-container ion-card {
+  margin: 0;
+  width: 100%;
+}
+
+/* Tarjetas de materias */
+ion-card {
+  background-color: #e3e3e3;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  color: #004aad;
+  transition: transform 0.2s ease;
+}
+
+ion-card:hover {
+  transform: scale(1.02);
+  cursor: pointer;
+}
+
+ion-card-header {
+  background-color: #e8e8e8;
+  padding: 0.75rem 1rem;
+}
+
+ion-card-title {
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: #000000;
+}
+
+/* Lista de horarios */
+ion-item {
+  background-color: #ffffff;
+  margin: 0.25rem 0;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+
+  ion-label {
+    font-size: 0.95rem;
+    color: #252525;
+  }
+
+  ion-button {
+    --background: #004aad;
+    color: white;
+    font-weight: bold;
+    font-size: 0.85rem;
+    border-radius: 6px;
+  }
+}
+
+/* Mensaje sin materias */
+div[ng-reflect-ng-if='true'] p {
+  text-align: center;
+  margin-top: 2rem;
+  font-size: 1rem;
+  color: #999;
+}
+
+/* Estilos para el bloque de materia expandida */
+.materia-expandida {
+  background-color: #e3e3e3 !important;
+  --background: #e3e3e3;
+  box-shadow: none !important;
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  overflow: visible;
+}
+
+/* Items dentro del bloque expandido */
+.materia-expandida ion-item {
+  background-color: #e3e3e3 !important;
+  --background: #e3e3e3;
+  --background-hover: #ffffff;
+  --background-focused: #ffffff;
+  --background-activated: #ffffff;
+  box-shadow: none !important;
+
+  margin: 0.25rem 0;
+  border-radius: 8px;
+}
+
+/* Centro del título por defecto */
+.cards-container ion-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Cuando la materia está expandida, alinea el header a la izquierda */
+.cards-container ion-card:has(.materia-expandida) ion-card-header {
+  justify-content: flex-start;
+}

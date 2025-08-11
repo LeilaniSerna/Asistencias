@@ -1,0 +1,245 @@
+-- Desactivar validación de claves foráneas temporalmente
+SET FOREIGN_KEY_CHECKS = 0;
+
+DROP DATABASE IF EXISTS checador_db;
+CREATE DATABASE checador_db;
+USE checador_db;
+
+-- ========================
+-- 1. ROLES Y USUARIOS
+-- ========================
+CREATE TABLE roles (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nombre_rol VARCHAR(50) NOT NULL UNIQUE
+);
+
+CREATE TABLE usuarios (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    correo VARCHAR(100) NOT NULL UNIQUE,
+    contrasena VARCHAR(255) NOT NULL,
+    rol_id INT NOT NULL,
+    FOREIGN KEY (rol_id) REFERENCES roles(id)
+);
+
+-- ========================
+-- 2. PROFESORES Y ALUMNOS
+-- ========================
+CREATE TABLE profesores (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    usuario_id INT NOT NULL,
+    nombre VARCHAR(100) NOT NULL,
+    apellido VARCHAR(100) NOT NULL,
+    correo VARCHAR(100) UNIQUE,
+    carrera VARCHAR(100),
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+);
+
+CREATE TABLE alumnos (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    matricula VARCHAR(20) UNIQUE,
+    nombre VARCHAR(100) NOT NULL,
+    apellido VARCHAR(100) NOT NULL,
+    email VARCHAR(100) UNIQUE,
+    grupo_id INT,
+    fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ========================
+-- 3. MATERIAS Y GRUPOS
+-- ========================
+CREATE TABLE grupos (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(50) NOT NULL,
+    periodo VARCHAR(20)
+);
+
+CREATE TABLE materias (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL
+);
+
+-- ========================
+-- 4. CLASES (grupo + materia + profesor)
+-- ========================
+CREATE TABLE clases (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    grupo_id INT NOT NULL,
+    materia_id INT NOT NULL,
+    profesor_id INT NOT NULL,
+    FOREIGN KEY (grupo_id) REFERENCES grupos(id),
+    FOREIGN KEY (materia_id) REFERENCES materias(id),
+    FOREIGN KEY (profesor_id) REFERENCES profesores(id)
+);
+
+-- ========================
+-- 5. SESIONES POR CLASE
+-- ========================
+CREATE TABLE sesiones (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    clase_id INT NOT NULL,
+    dia_semana ENUM('Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo') NOT NULL,
+    hora_inicio TIME NOT NULL,
+    hora_fin TIME NOT NULL,
+    FOREIGN KEY (clase_id) REFERENCES clases(id) ON DELETE CASCADE
+);
+
+-- ========================
+-- 6. CLASE_ALUMNOS (inscripción)
+-- ========================
+CREATE TABLE clase_alumnos (
+    clase_id INT NOT NULL,
+    alumno_id INT NOT NULL,
+    fecha_inscripcion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (clase_id, alumno_id),
+    FOREIGN KEY (clase_id) REFERENCES clases(id) ON DELETE CASCADE,
+    FOREIGN KEY (alumno_id) REFERENCES alumnos(id) ON DELETE CASCADE
+);
+
+-- ========================
+-- 7. SOLICITUDES DE ASISTENCIA
+-- ========================
+CREATE TABLE solicitudes_asistencia (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    alumno_id INT NOT NULL,
+    clase_id INT NOT NULL,
+    fecha DATE NOT NULL,
+    hora TIME,
+    estado ENUM('Pendiente', 'Aceptada', 'Rechazada') DEFAULT 'Pendiente',
+    fecha_solicitud TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    fecha_respuesta TIMESTAMP NULL,
+    respondida_por INT,
+    observaciones TEXT,
+    UNIQUE (alumno_id, clase_id, fecha),
+    FOREIGN KEY (alumno_id) REFERENCES alumnos(id) ON DELETE CASCADE,
+    FOREIGN KEY (clase_id) REFERENCES clases(id) ON DELETE CASCADE,
+    FOREIGN KEY (respondida_por) REFERENCES profesores(id) ON DELETE SET NULL
+);
+
+-- ========================
+-- 8. ASISTENCIAS
+-- ========================
+CREATE TABLE asistencias (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    alumno_id INT NOT NULL,
+    clase_id INT NOT NULL,
+    sesion_id INT,
+    fecha DATE NOT NULL,
+    hora TIME,
+    estado ENUM('Presente', 'Justificado', 'Injustificado', 'Retardo') DEFAULT 'Presente',
+    observaciones TEXT,
+    FOREIGN KEY (alumno_id) REFERENCES alumnos(id) ON DELETE CASCADE,
+    FOREIGN KEY (clase_id) REFERENCES clases(id) ON DELETE CASCADE,
+    FOREIGN KEY (sesion_id) REFERENCES sesiones(id) ON DELETE SET NULL
+);
+
+-- ========================
+-- 9. DATOS DE PRUEBA
+-- ========================
+
+-- Roles
+INSERT INTO roles (nombre_rol) VALUES ('Administrador'), ('Profesor'), ('Alumno');
+
+-- Usuarios
+INSERT INTO usuarios (correo, contrasena, rol_id) VALUES
+('alan.saucedo@universidad.com', '1234', 2),
+('ana.martinez@universidad.com', 'abcd', 3);
+
+-- Profesores
+INSERT INTO profesores (usuario_id, nombre, apellido, correo, carrera) VALUES
+(1, 'Alan', 'Saucedo', 'alan.saucedo@universidad.com', 'TI');
+
+-- Alumnos
+INSERT INTO alumnos (matricula, nombre, apellido, email, grupo_id) VALUES
+('A001', 'Ana', 'Martínez', 'ana.martinez@universidad.com', 1);
+
+-- Grupos
+INSERT INTO grupos (nombre, periodo) VALUES
+('Grupo 1', '2024-A');
+
+-- Materias
+INSERT INTO materias (nombre) VALUES
+('Programación Avanzada'),
+('Bases de Datos');
+
+-- Clases (Profesor Alan imparte ambas materias al mismo grupo)
+INSERT INTO clases (grupo_id, materia_id, profesor_id) VALUES
+(1, 1, 1),
+(1, 2, 1);
+
+-- Sesiones
+INSERT INTO sesiones (clase_id, dia_semana, hora_inicio, hora_fin) VALUES
+(1, 'Lunes', '08:00:00', '10:00:00'),
+(2, 'Miércoles', '10:00:00', '12:00:00');
+
+-- Inscripción alumno a clases
+INSERT INTO clase_alumnos (clase_id, alumno_id) VALUES
+(1, 1),
+(2, 1);
+
+-- Solicitudes de asistencia
+INSERT INTO solicitudes_asistencia (alumno_id, clase_id, fecha, hora, estado, respondida_por, observaciones) VALUES
+(1, 1, '2025-06-10', '08:00:00', 'Pendiente', NULL, NULL),
+(1, 2, '2025-06-11', '10:00:00', 'Rechazada', 1, 'No justificó la falta');
+
+-- Asistencias
+INSERT INTO asistencias (alumno_id, clase_id, sesion_id, fecha, hora, estado) VALUES
+(1, 1, 1, '2025-06-10', '08:05:00', 'Presente'),
+(1, 2, 2, '2025-06-11', '10:00:00', 'Justificado');
+
+-- Reactivar las claves foráneas
+SET FOREIGN_KEY_CHECKS = 1;
+-- Paso 1: Agregar la columna usuario_id a la tabla alumnos
+ALTER TABLE alumnos 
+ADD COLUMN usuario_id INT UNIQUE;
+
+-- Paso 2: Crear la relación foránea con la tabla usuarios
+ALTER TABLE alumnos 
+ADD CONSTRAINT fk_usuario_alumno 
+FOREIGN KEY (usuario_id) REFERENCES usuarios(id) 
+ON DELETE CASCADE;
+
+-- Paso 3: Asignar el usuario_id al alumno Ana Martínez
+UPDATE alumnos 
+SET usuario_id = (SELECT id FROM usuarios WHERE correo = 'ana.martinez@universidad.com') 
+WHERE email = 'ana.martinez@universidad.com';
+
+
+
+ALTER TABLE solicitudes_asistencia
+MODIFY COLUMN estado ENUM('Pendiente', 'Aceptada', 'Rechazada', 'Manual') DEFAULT 'Pendiente';
+
+
+
+
+USE checador_db;
+ALTER TABLE solicitudes_asistencia
+ADD COLUMN latitud_usuario DECIMAL(10, 8) NULL,
+ADD COLUMN longitud_usuario DECIMAL(11, 8) NULL;
+
+
+USE checador_db;
+
+-- Crear tabla de aulas
+CREATE TABLE IF NOT EXISTS aulas (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    latitud DECIMAL(10, 8) NOT NULL,
+    longitud DECIMAL(11, 8) NOT NULL
+);
+
+-- Modificar tabla sesiones para asociarla con un aula
+ALTER TABLE sesiones
+ADD COLUMN aula_id INT NULL,
+ADD FOREIGN KEY (aula_id) REFERENCES aulas(id) ON DELETE SET NULL;
+
+
+-- Agregar campo aula_id a la tabla clases
+ALTER TABLE clases
+ADD COLUMN aula_id INT,
+ADD FOREIGN KEY (aula_id) REFERENCES aulas(id);
+
+
+
+ALTER TABLE aulas
+  MODIFY latitud DOUBLE NOT NULL,
+  MODIFY longitud DOUBLE NOT NULL;

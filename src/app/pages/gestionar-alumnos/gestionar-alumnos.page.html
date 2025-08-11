@@ -1,0 +1,32 @@
+<ion-header [translucent]="true">
+  <ion-toolbar>
+    <ion-title>Gestionar Alumnos</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true" class="ion-padding">
+  <ion-header collapse="condense">
+    <ion-toolbar>
+      <ion-title size="large">Gestionar Alumnos</ion-title>
+    </ion-toolbar>
+  </ion-header>
+
+  <ion-spinner *ngIf="loading" name="crescent" class="ion-margin"></ion-spinner>
+
+  <ion-list *ngIf="!loading && alumnos.length > 0">
+    <ion-item *ngFor="let alumno of alumnos">
+      <ion-label>
+        <h2>{{ alumno.nombre }} {{ alumno.apellido }}</h2>
+        <p><strong>Grupo:</strong> {{ alumno.grupo }}</p>
+        <p>
+          <strong>Materias y faltas:</strong><br />
+          <span *ngIf="alumno.materia && alumno.faltas !== undefined">
+            {{ alumno.materia }}: {{ alumno.faltas }} falta{{ alumno.faltas !== 1 ? 's' : '' }}
+          </span>
+        </p>
+      </ion-label>
+    </ion-item>
+  </ion-list>
+
+  <p *ngIf="!loading && alumnos.length === 0">No hay alumnos registrados.</p>
+</ion-content>

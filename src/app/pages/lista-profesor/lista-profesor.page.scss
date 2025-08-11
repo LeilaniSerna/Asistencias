@@ -1,0 +1,125 @@
+:host {
+  display: block;
+  background-color: #ffffff;
+}
+
+/* Encabezado */
+ion-header {
+  --background: #ffffff !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08) !important;
+
+  ion-toolbar::part(background),
+  ion-toolbar .toolbar-background {
+    background-color: #9fc34c !important;
+  }
+
+  ion-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #ffffff !important;
+  }
+}
+
+/* Contenido */
+ion-content {
+  --background: #fbfbfb;
+  padding: 1rem;
+
+  /* Header colapsable */
+  ion-header[collapse="condense"] {
+    --background: #ffffff;
+
+    ion-title[size="large"] {
+      font-size: 1.6rem;
+      font-weight: 600;
+      color: #004aad;
+    }
+  }
+
+  /* Títulos */
+  h2 {
+    text-align: center;
+    font-size: 1.4rem;
+    font-weight: bold;
+    color: #004aad;
+    margin: 1.5rem 0 0.5rem;
+  }
+
+  h3 {
+    text-align: center;
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: #004aad;
+    margin-bottom: 1rem;
+  }
+
+  p {
+    text-align: center;
+    font-size: 1rem;
+    color: #252525;
+    margin-bottom: 1.5rem;
+  }
+
+  /* Tabla de alumnos */
+  ion-grid {
+    margin-top: 1rem;
+
+    > ion-row {
+      /* Fila de encabezados */
+      &:first-child {
+        ion-col {
+          background-color: #e8e8e8;
+          padding: 0.75rem 1rem;
+          border-radius: 8px;
+          color: #004aad;
+          font-weight: bold;
+        }
+        margin-bottom: 0.5rem;
+      }
+
+      /* Filas de datos */
+      &:not(:first-child) {
+        ion-col {
+          background-color: #ffffff;
+          padding: 0.5rem 1rem;
+          border-radius: 8px;
+          border: 1px solid #f0f0f0;
+          color: #252525;
+        }
+        margin-bottom: 0.5rem;
+      }
+    }
+  }
+
+  /* Botones de acción */
+  ion-button {
+    font-size: 0.85rem;
+    font-weight: bold;
+    border-radius: 6px;
+    --padding-start: 12px;
+    --padding-end: 12px;
+    margin-right: 0.5rem;
+
+    &[color="success"] {
+      --background: var(--ion-color-success);
+      color: #ffffff;
+    }
+    &[color="danger"] {
+      --background: var(--ion-color-danger);
+      color: #ffffff;
+    }
+    &[color="tertiary"] {
+      --background: var(--ion-color-tertiary);
+      color: #ffffff;
+    }
+  }
+
+  /* Mensaje fuera de horario */
+  ion-text[color="medium"] {
+    display: block;
+    text-align: center;
+    font-size: 0.95rem;
+    color: var(--ion-color-medium);
+    margin-top: 1rem;
+  }
+}

@@ -1,0 +1,29 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-title>
+      {{ nombreProfesor }}
+    </ion-title>
+    <app-header></app-header>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <h2>Grupos asignados</h2>
+
+  <ion-grid>
+    <ion-row>
+      <ion-col size="12" size-md="6" size-lg="4" *ngFor="let grupo of grupos">
+        <ion-card button (click)="irAMaterias(grupo.id, grupo.nombre)">
+          <ion-card-header>
+            <ion-card-title>{{ grupo.nombre }}</ion-card-title>
+            <ion-card-subtitle>Periodo: {{ grupo.periodo }}</ion-card-subtitle>
+          </ion-card-header>
+        </ion-card>
+      </ion-col>
+    </ion-row>
+  </ion-grid>
+
+  <div *ngIf="grupos.length === 0" class="no-grupos">
+    <p>No tienes grupos asignados.</p>
+  </div>
+</ion-content>
