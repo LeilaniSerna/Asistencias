@@ -1,2 +1,0 @@
-import{Ba as i,Oa as o,Pa as c,ab as r}from"./chunk-QI2UKG4A.js";import"./chunk-RW4GY4BD.js";var m=(()=>{let t=class t{constructor(){}ngOnInit(){}};t.\u0275fac=function(n){return new(n||t)},t.\u0275cmp=i({type:t,selectors:[["app-inicioalum"]],decls:2,vars:0,template:function(n,p){n&1&&(o(0,"p"),r(1,` inicioalum works!
-`),c())},encapsulation:2});let e=t;return e})();export{m as InicioalumComponent};
