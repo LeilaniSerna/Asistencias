@@ -83,7 +83,7 @@ export class InicioAlumnoPage implements OnInit {
   }
 
   obtenerAlumnoIdPorUsuario(usuarioId: number) {
-    this.http.get<{ alumno_id: number }>(`http://192.168.0.106:5000/usuario/${usuarioId}/alumno-id`)
+    this.http.get<{ alumno_id: number }>(`http://192.168.0.105:5000/usuario/${usuarioId}/alumno-id`)
       .subscribe({
         next: (res) => {
           this.alumnoId = res.alumno_id;
@@ -97,7 +97,7 @@ export class InicioAlumnoPage implements OnInit {
   }
 
   obtenerDatosAlumno(alumnoId: number) {
-    this.http.get<any>(`http://192.168.0.106:5000/alumno/${alumnoId}/info`).subscribe(response => {
+    this.http.get<any>(`http://192.168.0.105:5000/alumno/${alumnoId}/info`).subscribe(response => {
       this.nombreCompleto = `${response.nombre} ${response.apellido}`;
       this.grupoNombre = response.grupo;
 
@@ -107,7 +107,7 @@ export class InicioAlumnoPage implements OnInit {
   }
 
   obtenerMaterias(alumnoId: number) {
-    this.http.get<MateriaAlumno[]>(`http://192.168.0.106:5000/alumno/${alumnoId}/materias`).subscribe(response => {
+    this.http.get<MateriaAlumno[]>(`http://192.168.0.105:5000/alumno/${alumnoId}/materias`).subscribe(response => {
       const ahora = new Date();
       const diaActual = this.obtenerDiaSemana(ahora.getDay());
       const horaActual = ahora.toTimeString().slice(0, 5);
@@ -127,7 +127,7 @@ export class InicioAlumnoPage implements OnInit {
   }
 
   obtenerResumenAsistencias(alumnoId: number) {
-    this.http.get<AsistenciaResumen[]>(`http://192.168.0.106:5000/alumno/${alumnoId}/asistencias-resumen`).subscribe({
+    this.http.get<AsistenciaResumen[]>(`http://192.168.0.105:5000/alumno/${alumnoId}/asistencias-resumen`).subscribe({
       next: (res) => {
         this.asistenciasResumen = res;
       },
@@ -159,7 +159,7 @@ export class InicioAlumnoPage implements OnInit {
         longitud_usuario: coordinates.coords.longitude
       };
 
-      this.http.post('http://192.168.0.106:5000/alumno/enviar-solicitud', payload).subscribe(
+      this.http.post('http://192.168.0.105:5000/alumno/enviar-solicitud', payload).subscribe(
         res => {
           alert('Solicitud enviada correctamente');
           this.obtenerMaterias(this.alumnoId);

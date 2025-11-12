@@ -7,7 +7,7 @@ import { catchError } from 'rxjs/operators';
   providedIn: 'root'
 })
 export class GruposProfesorService {
-  private baseUrl = 'http://192.168.0.106:5000';
+  private baseUrl = 'http://192.168.0.105:5000';
 
   constructor(private http: HttpClient) {}
 

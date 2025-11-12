@@ -14,9 +14,11 @@ export class AuthService {
 
   constructor(private http: HttpClient, private router: Router) {
     if (Capacitor.isNativePlatform()) {
-      this.API_URL = 'http://192.168.0.106:5000';
+      // ✅ Para celular (iOS/Android) - Se usa tu IP de red
+      this.API_URL = 'http://192.168.0.105:5000';
     } else {
-      this.API_URL = 'http://192.168.0.106:5000';
+      // ✅ Para navegador (ionic serve) - Se usa localhost
+      this.API_URL = 'http://localhost:5000';
     }
   }
 
