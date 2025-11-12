@@ -10,16 +10,13 @@ import { Router } from '@angular/router';
 })
 export class AuthService {
 
-  private API_URL = '';
+  // Usamos la URL de Railway
+  // Eva a funcionar web y para el celular
+  private API_URL = 'https://asistencias-production-7dba.up.railway.app';
 
   constructor(private http: HttpClient, private router: Router) {
-    if (Capacitor.isNativePlatform()) {
-      // ✅ Para celular (iOS/Android) - Se usa tu IP de red
-      this.API_URL = 'http://192.168.0.105:5000';
-    } else {
-      // ✅ Para navegador (ionic serve) - Se usa localhost
-      this.API_URL = 'http://localhost:5000';
-    }
+    // Ya no es necesario el bloque if/else de Capacitor
+    // porque la URL de la nube es accesible desde cualquier plataforma.
   }
 
   login(correo: string, contrasena: string): Observable<any> {

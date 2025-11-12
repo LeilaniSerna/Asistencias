@@ -24,7 +24,7 @@ export interface AlumnoInfo {
 })
 export class InicioAlumnoService {
 
-  private apiUrl = 'http://192.168.0.105:5000';
+  private apiUrl = 'https://asistencias-production-7dba.up.railway.app';
 
   constructor(private http: HttpClient) {}
 

@@ -8,7 +8,7 @@ import { catchError } from 'rxjs/operators';
 })
 export class MateriasProfesorService {
 
-  private baseUrl = 'http://192.168.0.105:5000';
+  private baseUrl = 'https://asistencias-production-7dba.up.railway.app';
 
   constructor(private http: HttpClient) {}
 
