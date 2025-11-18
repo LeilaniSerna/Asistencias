@@ -1,6 +1,6 @@
 <ion-header [translucent]="true">
   <ion-toolbar>
-    <ion-title> {{ nombreCompleto }}  {{ grupoNombre }}</ion-title>
+    <ion-title> {{ nombreCompleto }}  {{ grupoNombre }}</ion-title>
   </ion-toolbar>
 </ion-header>
 
@@ -11,10 +11,11 @@
     </ion-toolbar>
   </ion-header>
 
+  <!-- === SECCIÓN 1: MATERIAS (Solicitud) === -->
   <ion-grid>
     <ion-row>
       <ion-col size="12">
-        <h2 style="text-align: center;">Materias</h2>
+        <h2>Materias</h2>
       </ion-col>
     </ion-row>
 
@@ -27,12 +28,10 @@
           </ion-card-header>
 
           <ion-card-content>
-          
             <p *ngIf="materia.estado_solicitud === 'Rechazada' && materia.observaciones">
               <strong>Motivo:</strong> {{ materia.observaciones }}
             </p>
 
-            <!-- ✅ Mostrar botón solo si NO hay estado de solicitud y está en horario -->
             <ion-button
               class="custom-asistencia-btn"
               color=""
@@ -42,25 +41,66 @@
               Enviar solicitud de asistencia
             </ion-button>
 
-            <!-- ⛔️ Fuera de horario sin solicitud -->
             <ion-note color="warning" *ngIf="!materia.estado_solicitud && !materia.puede_solicitar">
               Solo puedes solicitar asistencia el {{ materia.dia_semana }} entre {{ materia.hora_inicio }} y {{ materia.hora_fin }}
             </ion-note>
 
-            <!-- 🕐 Solicitud enviada -->
             <ion-note color="success" *ngIf="materia.estado_solicitud === 'Pendiente'">
               Solicitud ya enviada, esperando respuesta del profesor.
             </ion-note>
 
-            <!-- ❌ Rechazada sin botón -->
             <ion-note color="danger" *ngIf="materia.estado_solicitud === 'Rechazada' && !materia.observaciones">
               Solicitud rechazada.
             </ion-note>
 
-            <!-- ✅ Aceptada -->
             <ion-note color="primary" *ngIf="materia.estado_solicitud === 'Aceptada'">
               Solicitud aceptada.
             </ion-note>
+          </ion-card-content>
+        </ion-card>
+      </ion-col>
+    </ion-row>
+  </ion-grid>
+
+  <!-- === SECCIÓN 2: RESUMEN ACADÉMICO (NUEVO) === -->
+  <!-- Solo se muestra si ya se cargó el promedio -->
+  <ion-grid *ngIf="promedioGeneral !== null">
+    <ion-row>
+      <ion-col size="12">
+        <h2>Resumen Académico</h2>
+      </ion-col>
+    </ion-row>
+
+    <ion-row>
+      <ion-col size="12">
+        <ion-card>
+          <ion-card-header>
+            <!-- Mostramos el promedio con 1 decimal -->
+            <ion-card-title>Promedio General: {{ promedioGeneral | number:'1.1-1' }}</ion-card-title>
+          </ion-card-header>
+          <ion-card-content>
+            
+            <!-- Materia Sobresaliente -->
+            <div class="summary-item" *ngIf="materiaSobresaliente">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <ion-icon name="star" style="color: #9fc34c; font-size: 1.2rem;"></ion-icon>
+                <span class="summary-label">Materia Sobresaliente:</span>
+              </div>
+              <span class="summary-value">
+                {{ materiaSobresaliente.nombre }} ({{ materiaSobresaliente.calificacion }})
+              </span>
+            </div>
+
+            <!-- Materia a Mejorar -->
+            <div class="summary-item" *ngIf="materiaMejorar">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <ion-icon name="warning" style="color: #ffc409; font-size: 1.2rem;"></ion-icon>
+                <span class="summary-label">Materia a Mejorar:</span>
+              </div>
+              <span class="summary-value">
+                {{ materiaMejorar.nombre }} ({{ materiaMejorar.calificacion }})
+              </span>
+            </div>
 
           </ion-card-content>
         </ion-card>
@@ -68,16 +108,17 @@
     </ion-row>
   </ion-grid>
 
+  <!-- === SECCIÓN 3: RESUMEN DE ASISTENCIAS === -->
   <ion-grid>
     <ion-row>
       <ion-col size="12">
-        <h2 style="text-align: center; margin-top: 30px;">Resumen de Asistencias</h2>
+        <h2>Resumen de Asistencias</h2>
       </ion-col>
     </ion-row>
 
     <ion-row *ngIf="asistenciasResumen.length === 0">
-      <ion-col size="12" style="text-align:center;">
-        <p>No hay historial de asistencias para mostrar.</p>
+      <ion-col size="12">
+        <p class="empty-message">No hay historial de asistencias para mostrar.</p>
       </ion-col>
     </ion-row>
 
@@ -88,12 +129,22 @@
             <ion-card-title>{{ asistencia.materia }}</ion-card-title>
           </ion-card-header>
           <ion-card-content>
-            <p><strong>Asistencias:</strong> {{ asistencia.asistencias }}</p>
-            <p><strong>Faltas justificadas:</strong> {{ asistencia.faltas_justificadas }}</p>
-            <p><strong>Faltas injustificadas:</strong> {{ asistencia.faltas_injustificadas }}</p>
+            <div class="summary-item">
+              <span class="summary-label">Asistencias:</span>
+              <span class="summary-value">{{ asistencia.asistencias }}</span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-label">Faltas justificadas:</span>
+              <span class="summary-value">{{ asistencia.faltas_justificadas }}</span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-label">Faltas injustificadas:</span>
+              <span class="summary-value value-danger">{{ asistencia.faltas_injustificadas }}</span>
+            </div>
           </ion-card-content>
         </ion-card>
       </ion-col>
     </ion-row>
   </ion-grid>
+
 </ion-content>

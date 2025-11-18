@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpClientModule } from '@angular/common/http';
 import {
   IonContent,
   IonHeader,
@@ -16,10 +16,10 @@ import {
   IonCardTitle,
   IonCardContent,
   IonNote,
-  IonCardSubtitle
+  IonCardSubtitle,
+  IonIcon
 } from '@ionic/angular/standalone';
 import { Geolocation } from '@capacitor/geolocation';
-//import { HeaderComponent } from 'src/app/componentes/header/header.component';
 
 interface MateriaAlumno {
   clase_id: number;
@@ -39,6 +39,11 @@ interface AsistenciaResumen {
   faltas_injustificadas: number;
 }
 
+interface CalificacionMateria {
+  nombre: string;
+  calificacion: number;
+}
+
 @Component({
   selector: 'app-inicio-alumno',
   templateUrl: './inicio-alumno.page.html',
@@ -52,6 +57,7 @@ interface AsistenciaResumen {
     IonToolbar,
     CommonModule,
     FormsModule,
+    HttpClientModule,
     IonGrid,
     IonRow,
     IonCol,
@@ -61,7 +67,8 @@ interface AsistenciaResumen {
     IonCardTitle,
     IonCardContent,
     IonNote,
-    //HeaderComponent
+    IonIcon,
+    DecimalPipe
   ]
 })
 export class InicioAlumnoPage implements OnInit {
@@ -70,6 +77,14 @@ export class InicioAlumnoPage implements OnInit {
   grupoNombre: string = '';
   materias: MateriaAlumno[] = [];
   asistenciasResumen: AsistenciaResumen[] = [];
+
+  // Variables para el Resumen Académico
+  promedioGeneral: number | null = null;
+  materiaSobresaliente: CalificacionMateria | null = null;
+  materiaMejorar: CalificacionMateria | null = null;
+  
+  // URL de la API (Centralizada para facilitar cambios)
+  private apiUrl = 'https://asistencias-production-7dba.up.railway.app';
 
   constructor(private http: HttpClient) {}
 
@@ -83,31 +98,31 @@ export class InicioAlumnoPage implements OnInit {
   }
 
   obtenerAlumnoIdPorUsuario(usuarioId: number) {
-    this.http.get<{ alumno_id: number }>(`https://asistencias-production-7dba.up.railway.app/usuario/${usuarioId}/alumno-id`)
+    this.http.get<{ alumno_id: number }>(`${this.apiUrl}/usuario/${usuarioId}/alumno-id`)
       .subscribe({
         next: (res) => {
           this.alumnoId = res.alumno_id;
+          // Una vez tenemos el ID, cargamos toda la info
           this.obtenerDatosAlumno(this.alumnoId);
+          this.obtenerMaterias(this.alumnoId);
+          this.obtenerResumenAsistencias(this.alumnoId);
+          this.obtenerCalificaciones(this.alumnoId); // <--- Nueva llamada
         },
         error: (err) => {
           console.error('Error al obtener alumnoId:', err);
-          alert('No se pudo obtener el ID del alumno.');
         }
       });
   }
 
   obtenerDatosAlumno(alumnoId: number) {
-    this.http.get<any>(`https://asistencias-production-7dba.up.railway.app/alumno/${alumnoId}/info`).subscribe(response => {
+    this.http.get<any>(`${this.apiUrl}/alumno/${alumnoId}/info`).subscribe(response => {
       this.nombreCompleto = `${response.nombre} ${response.apellido}`;
       this.grupoNombre = response.grupo;
-
-      this.obtenerMaterias(alumnoId);
-      this.obtenerResumenAsistencias(alumnoId);
     });
   }
 
   obtenerMaterias(alumnoId: number) {
-    this.http.get<MateriaAlumno[]>(`https://asistencias-production-7dba.up.railway.app/alumno/${alumnoId}/materias`).subscribe(response => {
+    this.http.get<MateriaAlumno[]>(`${this.apiUrl}/alumno/${alumnoId}/materias`).subscribe(response => {
       const ahora = new Date();
       const diaActual = this.obtenerDiaSemana(ahora.getDay());
       const horaActual = ahora.toTimeString().slice(0, 5);
@@ -127,12 +142,26 @@ export class InicioAlumnoPage implements OnInit {
   }
 
   obtenerResumenAsistencias(alumnoId: number) {
-    this.http.get<AsistenciaResumen[]>(`https://asistencias-production-7dba.up.railway.app/alumno/${alumnoId}/asistencias-resumen`).subscribe({
+    this.http.get<AsistenciaResumen[]>(`${this.apiUrl}/alumno/${alumnoId}/asistencias-resumen`).subscribe({
       next: (res) => {
         this.asistenciasResumen = res;
       },
       error: (err) => {
         console.error('Error al obtener resumen de asistencias:', err);
+      }
+    });
+  }
+
+  // --- NUEVA FUNCIÓN: Obtener Calificaciones ---
+  obtenerCalificaciones(alumnoId: number) {
+    this.http.get<any>(`${this.apiUrl}/alumno/${alumnoId}/calificaciones-resumen`).subscribe({
+      next: (res) => {
+        this.promedioGeneral = res.promedio;
+        this.materiaSobresaliente = res.mejorMateria;
+        this.materiaMejorar = res.peorMateria;
+      },
+      error: (err) => {
+        console.error('Error al obtener calificaciones:', err);
       }
     });
   }
@@ -159,7 +188,7 @@ export class InicioAlumnoPage implements OnInit {
         longitud_usuario: coordinates.coords.longitude
       };
 
-      this.http.post('https://asistencias-production-7dba.up.railway.app/alumno/enviar-solicitud', payload).subscribe(
+      this.http.post(`${this.apiUrl}/alumno/enviar-solicitud`, payload).subscribe(
         res => {
           alert('Solicitud enviada correctamente');
           this.obtenerMaterias(this.alumnoId);

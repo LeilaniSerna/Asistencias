@@ -1,4 +1,3 @@
-
 ion-toolbar {
   box-shadow: none !important;
 }
@@ -67,7 +66,7 @@ ion-card {
     }
 
     ion-card-subtitle {
-        margin-top: 30px;
+      margin-top: 30px;
       font-size: 0.9rem;
       color: #000000;
       opacity: 0.8;
@@ -129,4 +128,44 @@ ion-note[color='danger'] {
 
 ion-note[color='success'] {
   --color: #9fc34c !important;
+}
+
+/* --- ESTILOS NUEVOS PARA EL ACOMODO --- */
+
+/* Centra el mensaje de "No hay historial..." */
+.empty-message {
+  text-align: center;
+  color: #666; /* Un color gris suave */
+  padding: 1rem 0;
+}
+
+/* Estilo para cada fila del resumen (Asistencias: 5) */
+.summary-item {
+  display: flex; /* Activa Flexbox para alinear */
+  justify-content: space-between; /* Texto a la izq, número a la der */
+  align-items: center;
+  
+  /* Hereda el estilo de tus <p> tags */
+  font-size: 0.9rem;
+  margin: 0.5rem 0;
+  color: #000000;
+}
+
+/* Estilo para la etiqueta (ej. "Faltas injustificadas:") */
+.summary-label {
+  /* Hereda el estilo de tu <strong> */
+  color: #252525;
+  font-weight: bold;
+}
+
+/* Estilo para el número (valor) */
+.summary-value {
+  font-weight: 600; /* Un poco más grueso */
+  color: #000000;
+}
+
+/* Estilo para el número de faltas (usa tu color de 'danger') */
+.summary-value.value-danger {
+  color: #eb445a !important; /* Tu color de peligro */
+  font-weight: 700; /* Más grueso para llamar la atención */
 }
