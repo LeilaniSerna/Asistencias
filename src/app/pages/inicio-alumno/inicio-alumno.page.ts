@@ -20,6 +20,11 @@ import {
   IonIcon
 } from '@ionic/angular/standalone';
 import { Geolocation } from '@capacitor/geolocation';
+import { addIcons } from 'ionicons';
+import { star, warning } from 'ionicons/icons';
+
+// Registrar iconos
+addIcons({ star, warning });
 
 interface MateriaAlumno {
   clase_id: number;
@@ -82,8 +87,8 @@ export class InicioAlumnoPage implements OnInit {
   promedioGeneral: number | null = null;
   materiaSobresaliente: CalificacionMateria | null = null;
   materiaMejorar: CalificacionMateria | null = null;
-  
-  // URL de la API (Centralizada para facilitar cambios)
+
+  // URL de la API (Tu URL de Railway)
   private apiUrl = 'https://asistencias-production-7dba.up.railway.app';
 
   constructor(private http: HttpClient) {}
@@ -102,11 +107,11 @@ export class InicioAlumnoPage implements OnInit {
       .subscribe({
         next: (res) => {
           this.alumnoId = res.alumno_id;
-          // Una vez tenemos el ID, cargamos toda la info
+          // Cargar toda la información una vez que tenemos el ID
           this.obtenerDatosAlumno(this.alumnoId);
           this.obtenerMaterias(this.alumnoId);
           this.obtenerResumenAsistencias(this.alumnoId);
-          this.obtenerCalificaciones(this.alumnoId); // <--- Nueva llamada
+          this.obtenerCalificaciones(this.alumnoId); // <--- ¡Llamada agregada!
         },
         error: (err) => {
           console.error('Error al obtener alumnoId:', err);
@@ -152,7 +157,7 @@ export class InicioAlumnoPage implements OnInit {
     });
   }
 
-  // --- NUEVA FUNCIÓN: Obtener Calificaciones ---
+  // --- FUNCIÓN NUEVA PARA CALIFICACIONES ---
   obtenerCalificaciones(alumnoId: number) {
     this.http.get<any>(`${this.apiUrl}/alumno/${alumnoId}/calificaciones-resumen`).subscribe({
       next: (res) => {

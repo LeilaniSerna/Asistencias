@@ -851,14 +851,13 @@ def resumen_asistencias_alumno(alumno_id):
 
 
 # resumen de calificaciones
+# --- NUEVA RUTA PARA EL RESUMEN ACADÉMICO ---
 @routes.route('/alumno/<int:alumno_id>/calificaciones-resumen', methods=['GET'])
 def obtener_calificaciones_resumen(alumno_id):
     conexion = obtener_conexion()
     cursor = conexion.cursor(dictionary=True)
 
     try:
-        # Consultar todas las calificaciones del alumno
-        # Unimos con 'materias' para obtener el nombre real de la materia
         query = """
             SELECT 
                 m.nombre AS materia, 
@@ -872,28 +871,24 @@ def obtener_calificaciones_resumen(alumno_id):
         calificaciones = cursor.fetchall()
 
         if not calificaciones:
-            # Si no tiene calificaciones, devolvemos valores vacíos pero estructura válida
             return jsonify({
                 "promedio": None,
                 "mejorMateria": None,
                 "peorMateria": None
             }), 200
 
-        # Calcular Promedio
-        total = sum(c['calificacion'] for c in calificaciones)
+        # Convertir a float y calcular promedio
+        total = sum(float(c['calificacion']) for c in calificaciones)
         promedio = total / len(calificaciones)
 
-        # Encontrar Mejor y Peor materia
-        # Usamos funciones lambda para ordenar por calificación
         mejor_materia = max(calificaciones, key=lambda x: x['calificacion'])
         peor_materia = min(calificaciones, key=lambda x: x['calificacion'])
 
-        # Formatear respuesta
         respuesta = {
-            "promedio": round(promedio, 1), # Redondear a 1 decimal (ej. 9.2)
+            "promedio": round(promedio, 1), 
             "mejorMateria": {
                 "nombre": mejor_materia['materia'],
-                "calificacion": float(mejor_materia['calificacion']) # Convertir Decimal a float
+                "calificacion": float(mejor_materia['calificacion'])
             },
             "peorMateria": {
                 "nombre": peor_materia['materia'],
