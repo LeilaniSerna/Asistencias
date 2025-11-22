@@ -182,53 +182,47 @@ def obtener_alumnos_detalle():
 
 
 """ obtener materias por grupo que son impartidas por tal profesor """
-@routes.route('/profesor/<int:profesor_id>/grupos/<int:grupo_id>/materias', methods=['GET'])
-def obtener_materias_por_profesor_y_grupo(profesor_id, grupo_id):
+# 1. Obtener lista de alumnos de una clase específica para calificar
+@routes.route('/profesor/clase/<int:clase_id>/alumnos-calificaciones', methods=['GET'])
+def obtener_alumnos_para_calificar(clase_id):
+    periodo = request.args.get('periodo', 'Parcial 1') # Por defecto Parcial 1
     conexion = obtener_conexion()
     cursor = conexion.cursor(dictionary=True)
-    
+
     try:
+        # Obtenemos alumnos inscritos y sus calificaciones (si ya existen) para ese periodo
         query = """
-            SELECT m.nombre AS materia, s.dia_semana, s.hora_inicio, s.hora_fin
-            FROM clases c
-            INNER JOIN materias m ON c.materia_id = m.id
-            INNER JOIN grupos g ON c.grupo_id = g.id
-            LEFT JOIN sesiones s ON s.clase_id = c.id
-            WHERE g.id = %s AND c.profesor_id = %s
-            ORDER BY m.nombre
+            SELECT 
+                a.id AS alumno_id,
+                a.matricula,
+                a.nombre,
+                a.apellido,
+                c.calificacion,
+                c.observaciones
+            FROM clase_alumnos ca
+            INNER JOIN alumnos a ON ca.alumno_id = a.id
+            LEFT JOIN calificaciones c 
+                ON c.alumno_id = a.id 
+                AND c.clase_id = ca.clase_id 
+                AND c.periodo = %s
+            WHERE ca.clase_id = %s
+            ORDER BY a.apellido, a.nombre
         """
-        cursor.execute(query, (grupo_id, profesor_id))
-        resultados = cursor.fetchall()
+        cursor.execute(query, (periodo, clase_id))
+        alumnos = cursor.fetchall()
 
-        def format_time(value):
-            if isinstance(value, timedelta):
-                total_seconds = int(value.total_seconds())
-                hours = total_seconds // 3600
-                minutes = (total_seconds % 3600) // 60
-                return f"{hours:02d}:{minutes:02d}"
-            elif value is None:
-                return "00:00"
-            else:
-                return value.strftime('%H:%M')
+        # Convertir decimales a float para JSON
+        for alumno in alumnos:
+            if alumno['calificacion'] is not None:
+                alumno['calificacion'] = float(alumno['calificacion'])
+            
+            # Bandera para el frontend (saber si ya tiene calificacion guardada)
+            alumno['guardado'] = True if alumno['calificacion'] is not None else False
 
-        materias = []
-        for row in resultados:
-            nombre = row['materia']
-            if row['dia_semana']:
-                hora_inicio = format_time(row['hora_inicio'])
-                hora_fin = format_time(row['hora_fin'])
-                horario = f"{row['dia_semana']} {hora_inicio} - {hora_fin}"
-            else:
-                horario = "Horario no definido"
-            materias.append({
-                "nombre": nombre,
-                "horario": horario
-            })
-
-        return jsonify(materias), 200
+        return jsonify(alumnos), 200
 
     except Exception as e:
-        print("Error en /profesor/<id>/grupos/<id>/materias:", e)
+        print("Error obteniendo alumnos para calificar:", e)
         return jsonify({"error": str(e)}), 500
     finally:
         cursor.close()
