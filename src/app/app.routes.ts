@@ -72,5 +72,13 @@ export const routes: Routes = [
   {
     path: 'inicio-alumno',
     loadComponent: () => import('./pages/inicio-alumno/inicio-alumno.page').then( m => m.InicioAlumnoPage)
+  },
+  {
+    path: 'captura-calificaciones',
+    loadComponent: () => import('./pages/captura-calificaciones/captura-calificaciones.page').then( m => m.CapturaCalificacionesPage)
+  },
+  {
+    path: 'captura-calificaciones',
+    loadComponent: () => import('./pages/captura-calificaciones/captura-calificaciones.page').then( m => m.CapturaCalificacionesPage)
   }
 ];

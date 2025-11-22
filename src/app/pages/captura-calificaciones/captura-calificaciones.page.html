@@ -1,0 +1,112 @@
+<ion-header>
+  <ion-toolbar > 
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/inicio-profesor"></ion-back-button>
+    </ion-buttons>
+    <ion-title>Grupo {{ grupoNombre }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <div class="main-container">
+    
+    <!-- Header Interno -->
+    <div class="view-header">
+      <div class="title-group">
+        <h2>Captura de Calificaciones</h2>
+        <p>Grupo: <strong>{{ grupoNombre }}</strong> | Materia: <strong>{{ materiaNombre }}</strong></p>
+      </div>
+
+      <div class="period-selector">
+        <label>Evaluando:</label>
+        <select [(ngModel)]="periodoSeleccionado" (change)="cargarAlumnos()">
+          <option value="Parcial 1">Parcial 1</option>
+          <option value="Parcial 2">Parcial 2</option>
+          <option value="Final">Final</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Tabla -->
+    <div class="table-responsive">
+      <table class="grades-table">
+        <thead>
+          <tr>
+            <th width="30%">Alumno</th>
+            <th width="15%" style="text-align:center">Calificación</th>
+            <th width="40%">Observaciones</th>
+            <th width="15%" style="text-align:center">Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+          
+          <tr *ngFor="let alumno of alumnos">
+            <td>
+              <div class="student-info">
+                <span class="student-name">{{ alumno.nombre }} {{ alumno.apellido }}</span>
+                <span class="student-id">{{ alumno.matricula }}</span>
+              </div>
+            </td>
+            
+            <td style="text-align:center">
+              <div class="grade-input-container">
+                <input type="number" class="grade-input" 
+                       [(ngModel)]="alumno.calificacion" 
+                       (input)="onCambioInput(alumno)"
+                       min="0" max="10" step="0.1" placeholder="-">
+              </div>
+            </td>
+
+            <td>
+              <input type="text" class="obs-input" 
+                     [(ngModel)]="alumno.observaciones" 
+                     (input)="onCambioInput(alumno)"
+                     placeholder="Comentarios...">
+            </td>
+
+            <td style="text-align:center">
+              <span class="status-badge" 
+                    [ngClass]="{'status-saved': !alumno.modificado && alumno.guardado, 'status-pending': alumno.modificado}">
+                {{ alumno.modificado ? 'Pendiente' : (alumno.guardado ? 'Guardado' : '-') }}
+              </span>
+              <!-- Botón discreto para guardar individualmente si se desea -->
+              <button class="btn-icon-save" *ngIf="alumno.modificado" (click)="guardarCalificacion(alumno)">
+                <ion-icon name="save-outline"></ion-icon>
+              </button>
+            </td>
+          </tr>
+
+          <tr *ngIf="alumnos.length === 0 && !loading">
+            <td colspan="4" style="text-align:center; padding: 2rem;">No hay alumnos en este grupo.</td>
+          </tr>
+
+          <tr *ngIf="loading">
+            <td colspan="4" style="text-align:center; padding: 2rem;">
+              <ion-spinner name="crescent"></ion-spinner> Cargando...
+            </td>
+          </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Botón Flotante Guardar Todo -->
+    <div class="actions-footer">
+      <button class="btn-save-all" (click)="guardarTodo()">
+        <ion-icon name="save-outline" style="margin-right:8px"></ion-icon>
+        Guardar Cambios
+      </button>
+    </div>
+
+  </div>
+
+  <ion-toast
+    [isOpen]="isToastOpen"
+    [message]="toastMessage"
+    [duration]="2000"
+    (didDismiss)="isToastOpen = false"
+    position="bottom"
+    color="dark">
+  </ion-toast>
+
+</ion-content>

@@ -1,0 +1,115 @@
+:host {
+  --verde-utc: #9fc34c;
+  --azul-utc: #004aad;
+  --blanco: #ffffff;
+  --gris-fondo: #f4f5f8;
+  --borde: #e0e0e0;
+  --verde-exito: #2dd36f;
+  --amarillo-pendiente: #ffc409;
+}
+
+/* --- CORRECCIÓN DEL HEADER (Verde UTC y Letras Blancas) --- */
+
+ion-toolbar {
+  /* Forzamos el fondo verde institucional */
+  --background: #9fc34c !important; 
+  /* Forzamos el color de texto base a blanco */
+  --color: #ffffff !important;
+  color: #ffffff !important;
+  font-size: 1.2rem;
+}
+
+/* Aseguramos que el título sea blanco */
+ion-title {
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: #ffffff !important;
+}
+
+/* Aseguramos que la flecha de regreso sea blanca */
+ion-back-button {
+  --color: #ffffff !important;
+  color: #ffffff !important;
+  /* A veces Ionic usa opacidad, esto la quita para que sea blanco puro */
+  opacity: 1 !important; 
+}
+ion-buttons {
+  color: #ffffff !important;
+}
+
+/* --- ESTILOS DEL CONTENIDO --- */
+
+ion-content { --background: var(--gris-fondo); }
+
+.main-container {
+  max-width: 1100px; margin: 2rem auto;
+  background: var(--blanco); border-radius: 12px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+  overflow: hidden; padding-bottom: 20px;
+  @media(max-width: 768px) { margin: 10px; width: auto; }
+}
+
+.view-header {
+  padding: 20px 25px; border-bottom: 2px solid var(--gris-fondo);
+  display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 15px;
+  
+  .title-group h2 { margin: 0; color: var(--azul-utc); font-size: 1.6rem; font-weight: 700; }
+  .title-group p { margin: 4px 0 0; color: #666; font-size: 1rem; }
+}
+
+.period-selector {
+  display: flex; align-items: center; gap: 10px;
+  background: #f0f8ff; padding: 8px 12px; border-radius: 8px; border: 1px solid #cce0ff;
+  label { font-weight: 600; color: var(--azul-utc); font-size: 0.9rem; }
+  select { padding: 6px 10px; border: 1px solid var(--azul-utc); border-radius: 6px; font-size: 0.95rem; color: var(--azul-utc); font-weight: 600; cursor: pointer; outline: none; background: white; }
+}
+
+.table-responsive { width: 100%; overflow-x: auto; }
+
+.grades-table {
+  width: 100%; border-collapse: collapse; margin-top: 0;
+  thead { background-color: var(--azul-utc); color: white; 
+    th { padding: 12px 15px; text-align: left; font-weight: 600; font-size: 0.9rem; } 
+  }
+  tbody tr:hover { background-color: #f9fcf9; }
+  tbody td { padding: 10px 15px; border-bottom: 1px solid var(--borde); vertical-align: middle; }
+}
+
+.student-info { display: flex; flex-direction: column; 
+  .student-name { font-weight: 600; color: #222; font-size: 0.95rem; }
+  .student-id { font-size: 0.8rem; color: #888; }
+}
+
+.grade-input-container { display: flex; justify-content: center; }
+.grade-input {
+  width: 70px; padding: 8px; border: 1px solid #ccc; border-radius: 6px;
+  text-align: center; font-size: 1rem; font-weight: bold; color: var(--azul-utc);
+  &:focus { border-color: var(--verde-utc); outline: none; background: #fafff5; }
+}
+
+.obs-input {
+  width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 0.9rem;
+  &:focus { border-color: var(--azul-utc); outline: none; }
+}
+
+.status-badge {
+  font-size: 0.7rem; padding: 3px 8px; border-radius: 10px; font-weight: 600; display: inline-block; min-width: 70px;
+  &.status-saved { background-color: #d4edda; color: #155724; }
+  &.status-pending { background-color: #fff3cd; color: #856404; }
+}
+
+.btn-icon-save {
+  background: none; border: none; color: var(--verde-utc); font-size: 1.4rem; cursor: pointer; margin-left: 5px; vertical-align: middle;
+  &:hover { transform: scale(1.1); }
+}
+
+.actions-footer {
+  padding: 15px 25px; display: flex; justify-content: flex-end; border-top: 1px solid var(--borde); margin-top: 5px;
+}
+
+.btn-save-all {
+  background: var(--verde-utc); color: white; border: none; padding: 10px 25px;
+  font-size: 0.95rem; font-weight: 700; border-radius: 6px; cursor: pointer;
+  display: flex; align-items: center; box-shadow: 0 4px 8px rgba(159, 195, 76, 0.3);
+  &:hover { transform: translateY(-2px); filter: brightness(1.05); }
+}

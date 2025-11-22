@@ -1,32 +1,55 @@
 <ion-header>
-  <ion-toolbar>
-    <ion-title>Materias del grupo {{ grupoNombre }}</ion-title>
+  <ion-toolbar color="success"> 
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/inicio-profesor"></ion-back-button>
+    </ion-buttons>
+    <ion-title>Grupo {{ grupoNombre }}</ion-title>
   </ion-toolbar>
 </ion-header>
 
 <ion-content class="ion-padding">
-  <h2>Materias asignadas</h2>
+  <h2>Materias Asignadas</h2>
 
   <div class="cards-container">
     <ion-card *ngFor="let materia of materias">
-      <ion-card-header (click)="toggleExpandir(materia.nombre)" style="cursor: pointer">
+      
+      <!-- Cabecera (Clic para expandir) -->
+      <ion-card-header (click)="toggleExpandir(materia.nombre)" class="clickable-header">
         <ion-card-title>{{ materia.nombre }}</ion-card-title>
+        <ion-icon [name]="materiaExpandida === materia.nombre ? 'chevron-up-outline' : 'chevron-down-outline'"></ion-icon>
       </ion-card-header>
 
+      <!-- Contenido Expandible -->
       <div *ngIf="materiaExpandida === materia.nombre" class="materia-expandida">
-        <ion-item *ngFor="let horario of materia.horarios">
-          <ion-label>
-            <strong>{{ horario }}</strong>
+        
+        <ion-item *ngFor="let horario of materia.horarios" lines="full" class="horario-item">
+          <ion-label class="ion-text-wrap">
+            <h3>{{ horario.texto }}</h3>
           </ion-label>
-          <ion-button slot="end" (click)="irALista(materia.nombre, horario)">
-            Ver lista
-          </ion-button>
+          
+          <!-- NUEVOS BOTONES INTUITIVOS -->
+          <div class="action-buttons" slot="end">
+            
+            <!-- Botón Asistencia -->
+            <ion-button fill="outline" size="small" (click)="irAAsistencia(materia.nombre, horario)">
+              <ion-icon slot="start" name="list-outline"></ion-icon>
+              Asistencia
+            </ion-button>
+
+            <!-- Botón Calificaciones -->
+            <ion-button color="primary" size="small" (click)="irACalificaciones(materia.nombre, horario)">
+              <ion-icon slot="start" name="create-outline"></ion-icon>
+              Calif.
+            </ion-button>
+
+          </div>
         </ion-item>
+
       </div>
     </ion-card>
   </div>
 
-  <div *ngIf="materias.length === 0">
+  <div *ngIf="materias.length === 0" class="empty-state">
     <p>No hay materias asignadas para este grupo.</p>
   </div>
 </ion-content>

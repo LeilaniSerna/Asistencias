@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core'; 
+import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -12,9 +12,16 @@ import {
   IonCardTitle,
   IonButton,
   IonItem,
-  IonLabel
+  IonLabel,
+  IonIcon,
+  IonButtons,
+  IonBackButton
 } from '@ionic/angular/standalone';
 import { MateriasProfesorService } from 'src/app/servicios/materias-profesor.service';
+import { addIcons } from 'ionicons';
+import { listOutline, createOutline, chevronDownOutline, chevronUpOutline } from 'ionicons/icons';
+
+addIcons({ listOutline, createOutline, chevronDownOutline, chevronUpOutline });
 
 @Component({
   selector: 'app-materias-profesor',
@@ -22,23 +29,14 @@ import { MateriasProfesorService } from 'src/app/servicios/materias-profesor.ser
   styleUrls: ['./materias-profesor.page.scss'],
   standalone: true,
   imports: [
-    IonContent,
-    IonHeader,
-    IonTitle,
-    IonToolbar,
-    IonCard,
-    IonCardHeader,
-    IonCardTitle,
-    IonButton,
-    IonItem,
-    IonLabel,
-    CommonModule,
-    FormsModule
+    IonContent, IonHeader, IonTitle, IonToolbar, IonCard, IonCardHeader,
+    IonCardTitle, IonButton, IonItem, IonLabel, IonIcon, IonButtons, IonBackButton,
+    CommonModule, FormsModule
   ]
 })
 export class MateriasProfesorPage implements OnInit {
   grupoId: number | null = null;
-  materias: any[] = [];
+  materias: any[] = []; 
   grupoNombre: string = '';
   materiaExpandida: string | null = null;
 
@@ -61,6 +59,7 @@ export class MateriasProfesorPage implements OnInit {
         this.materiasService.obtenerMaterias(profesorId, this.grupoId).subscribe({
           next: (data) => {
             const agrupadas: any = {};
+            
             data.forEach((item: any) => {
               if (!agrupadas[item.nombre]) {
                 agrupadas[item.nombre] = {
@@ -68,8 +67,13 @@ export class MateriasProfesorPage implements OnInit {
                   horarios: []
                 };
               }
-              agrupadas[item.nombre].horarios.push(item.horario);
+              // Guardamos ID y Texto para usarlos en los botones
+              agrupadas[item.nombre].horarios.push({
+                id: item.clase_id,     
+                texto: item.horario    
+              });
             });
+            
             this.materias = Object.values(agrupadas);
           },
           error: (error) => {
@@ -84,13 +88,26 @@ export class MateriasProfesorPage implements OnInit {
     this.materiaExpandida = this.materiaExpandida === nombreMateria ? null : nombreMateria;
   }
 
-  irALista(materiaNombre: string, horario: string) {
+  // Botón 1: Ir a Pasar Asistencia
+  irAAsistencia(materiaNombre: string, horarioObj: any) {
     this.router.navigate(['/lista-profesor'], {
       queryParams: {
         grupoId: this.grupoId,
         grupoNombre: this.grupoNombre,
-        materiaNombre,
-        horario
+        materiaNombre: materiaNombre,
+        horario: horarioObj.texto,
+        claseId: horarioObj.id
+      }
+    });
+  }
+
+  // Botón 2: Ir a Capturar Calificaciones
+  irACalificaciones(materiaNombre: string, horarioObj: any) {
+    this.router.navigate(['/captura-calificaciones'], {
+      queryParams: {
+        claseId: horarioObj.id, 
+        grupoNombre: this.grupoNombre,
+        materiaNombre: materiaNombre
       }
     });
   }

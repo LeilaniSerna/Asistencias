@@ -905,3 +905,92 @@ def obtener_calificaciones_resumen(alumno_id):
     finally:
         cursor.close()
         conexion.close()
+        
+
+
+
+#  Obtener lista de alumnos de una clase específica para calificar
+
+@routes.route('/profesor/clase/<int:clase_id>/alumnos-calificaciones', methods=['GET'])
+def obtener_alumnos_para_calificar(clase_id):
+    periodo = request.args.get('periodo', 'Parcial 1') # Por defecto Parcial 1
+    conexion = obtener_conexion()
+    cursor = conexion.cursor(dictionary=True)
+
+    try:
+        # Obtenemos alumnos inscritos y sus calificaciones (si ya existen) para ese periodo
+        query = """
+            SELECT 
+                a.id AS alumno_id,
+                a.matricula,
+                a.nombre,
+                a.apellido,
+                c.calificacion,
+                c.observaciones
+            FROM clase_alumnos ca
+            INNER JOIN alumnos a ON ca.alumno_id = a.id
+            LEFT JOIN calificaciones c 
+                ON c.alumno_id = a.id 
+                AND c.clase_id = ca.clase_id 
+                AND c.periodo = %s
+            WHERE ca.clase_id = %s
+            ORDER BY a.apellido, a.nombre
+        """
+        cursor.execute(query, (periodo, clase_id))
+        alumnos = cursor.fetchall()
+
+        # Convertir decimales a float para JSON
+        for alumno in alumnos:
+            if alumno['calificacion'] is not None:
+                alumno['calificacion'] = float(alumno['calificacion'])
+            
+            # Bandera para el frontend (saber si ya tiene calificacion guardada)
+            alumno['guardado'] = True if alumno['calificacion'] is not None else False
+
+        return jsonify(alumnos), 200
+
+    except Exception as e:
+        print("Error obteniendo alumnos para calificar:", e)
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+        conexion.close()
+
+
+# 2. Guardar calificación de un alumno
+@routes.route('/profesor/guardar-calificacion', methods=['POST'])
+def guardar_calificacion():
+    conexion = obtener_conexion()
+    cursor = conexion.cursor(dictionary=True)
+    data = request.get_json()
+
+    try:
+        alumno_id = data.get('alumno_id')
+        clase_id = data.get('clase_id')
+        periodo = data.get('periodo')
+        calificacion = data.get('calificacion')
+        observaciones = data.get('observaciones', '')
+
+        if not all([alumno_id, clase_id, periodo, calificacion]):
+             return jsonify({"error": "Faltan datos"}), 400
+
+        # Usamos INSERT ... ON DUPLICATE KEY UPDATE para guardar o actualizar
+        query = """
+            INSERT INTO calificaciones (alumno_id, clase_id, periodo, calificacion, observaciones)
+            VALUES (%s, %s, %s, %s, %s)
+            ON DUPLICATE KEY UPDATE
+                calificacion = VALUES(calificacion),
+                observaciones = VALUES(observaciones),
+                fecha_registro = CURRENT_TIMESTAMP
+        """
+        cursor.execute(query, (alumno_id, clase_id, periodo, calificacion, observaciones))
+        conexion.commit()
+
+        return jsonify({"message": "Calificación guardada correctamente"}), 200
+
+    except Exception as e:
+        print("Error guardando calificación:", e)
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+        conexion.close()
