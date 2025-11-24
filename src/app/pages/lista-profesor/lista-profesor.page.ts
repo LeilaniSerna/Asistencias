@@ -12,7 +12,7 @@ import {
   IonCol,
   IonButton,
   AlertController,
-  IonText, IonButtons } from '@ionic/angular/standalone';
+  IonText, IonButtons, IonBackButton, IonIcon } from '@ionic/angular/standalone';
 import { AlumnosService } from 'src/app/servicios/alumnos.service';
 import { AsistenciasProfesorService } from 'src/app/servicios/asistencias-profesor.service';
 
@@ -21,18 +21,13 @@ import { AsistenciasProfesorService } from 'src/app/servicios/asistencias-profes
   templateUrl: './lista-profesor.page.html',
   styleUrls: ['./lista-profesor.page.scss'],
   standalone: true,
-  imports: [IonButtons, 
+  imports: [IonIcon, IonBackButton, IonButtons, 
     IonContent,
     IonHeader,
     IonTitle,
     IonToolbar,
-    IonGrid,
-    IonRow,
-    IonCol,
-    IonButton,
     CommonModule,
     FormsModule,
-    IonText
   ]
 })
 export class ListaProfesorPage implements OnInit {

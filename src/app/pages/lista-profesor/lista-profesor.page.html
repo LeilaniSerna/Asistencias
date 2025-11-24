@@ -1,71 +1,99 @@
-<ion-header [translucent]="true">
-  <ion-toolbar>
+<ion-header>
+  <ion-toolbar color="success">
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/materias-profesor"></ion-back-button>
+    </ion-buttons>
     <ion-title>Lista de Alumnos</ion-title>
   </ion-toolbar>
 </ion-header>
 
-<ion-content [fullscreen]="true" class="ion-padding">
-  <ion-header collapse="condense">
-    <ion-toolbar>
-      <ion-title size="large">Lista de Alumnos</ion-title>
-    </ion-toolbar>
-  </ion-header>
+<ion-content>
+  <div class="main-container">
+    
+    <!-- Encabezado de la Clase -->
+    <div class="class-header">
+      <h2>{{ grupoNombre }}</h2>
+      <h3>{{ materiaNombre }}</h3>
+      <p>{{ horario }}</p>
+    </div>
 
-  <h2>{{ grupoNombre }}</h2>
-  <h3>{{ materiaNombre }}</h3>
-  <p>{{ horario }}</p>
+    <!-- Tabla de Asistencia -->
+    <div class="table-responsive">
+      <table class="attendance-table">
+        <thead>
+          <tr>
+            <th width="35%">Alumno</th>
+            <th width="15%" style="text-align: center;">Riesgo IA</th> 
+            <th width="20%">Solicitud</th>
+            <th width="30%">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          
+          <tr *ngFor="let alumno of alumnos" [ngClass]="{'risk-high': alumno.ia_risk === 1}">
+            
+            <!-- Columna 1: Nombre -->
+            <td>
+              <span class="student-name">{{ alumno.nombre }}</span>
+              <span class="student-id">{{ alumno.matricula }}</span>
+              
+              <!-- Mensaje de IA sutil -->
+              <p class="ia-message" *ngIf="alumno.ia_risk === 1" title="{{ alumno.ia_msg }}">
+                <ion-icon name="alert-circle-outline"></ion-icon> ALTO RIESGO ({{ alumno.ia_prob }}%)
+              </p>
+            </td>
+            
+            <!-- Columna 2: Punto de Riesgo -->
+            <td style="text-align: center;">
+              <span class="risk-dot" 
+                    [ngClass]="{'high': alumno.ia_risk === 1, 'low': alumno.ia_risk === 0}"
+                    title="Probabilidad de deserción: {{ alumno.ia_prob }}%">
+              </span>
+            </td>
 
-  <ion-grid>
-    <ion-row>
-      <ion-col><strong>Alumno</strong></ion-col>
-      <ion-col><strong>Solicitud de asistencia</strong></ion-col>
-      <ion-col><strong>Acciones</strong></ion-col>
-    </ion-row>
+            <!-- Columna 3: Estado Solicitud -->
+            <td>
+              <span class="status-badge" [ngClass]="{
+                'pending': alumno.estado === 'Pendiente',
+                'accepted': alumno.estado === 'Aceptada',
+                'rejected': alumno.estado === 'Rechazada',
+                'none': alumno.estado !== 'Pendiente' && alumno.estado !== 'Aceptada' && alumno.estado !== 'Rechazada'
+              }">
+                {{ alumno.estado === 'Sin solicitud' ? '-' : alumno.estado.toUpperCase() }}
+              </span>
+            </td>
 
-    <ion-row *ngFor="let alumno of alumnos">
-      <ion-col>{{ alumno.nombre }}</ion-col>
-      <ion-col>Asistencia: {{ alumno.estado }}</ion-col>
-      <ion-col>
-        <!-- ✅ Mostrar acciones SOLO si estamos dentro del horario -->
-        <ng-container *ngIf="dentroHorario; else fueraHorario">
-          <!-- Botones Aceptar/Rechazar solo si hay solicitud -->
-          <ion-button
-            color="success"
-            size="small"
-            (click)="aceptarSolicitud(alumno.solicitud_id)"
-            [disabled]="alumno.estado !== 'Pendiente'"
-            *ngIf="alumno.estado !== 'Sin solicitud'"
-          >
-            Aceptar
-          </ion-button>
-          <ion-button
-            color="danger"
-            size="small"
-            (click)="rechazarSolicitud(alumno.solicitud_id)"
-            [disabled]="alumno.estado !== 'Pendiente'"
-            *ngIf="alumno.estado !== 'Sin solicitud'"
-          >
-            Rechazar
-          </ion-button>
+            <!-- Columna 4: Acciones -->
+            <td>
+              <div class="actions-container">
+                
+                <!-- Caso: Solicitud Pendiente (Aceptar/Rechazar) -->
+                <ng-container *ngIf="alumno.estado === 'Pendiente'">
+                  <button class="btn btn-accept" (click)="aceptarSolicitud(alumno.solicitud_id)">
+                    <ion-icon name="checkmark-outline"></ion-icon>
+                  </button>
+                  <button class="btn btn-reject" (click)="rechazarSolicitud(alumno.solicitud_id)">
+                    <ion-icon name="close-outline"></ion-icon>
+                  </button>
+                </ng-container>
 
-          <!-- ✅ Botón de asistencia manual (usando la función para validar) -->
-          <ion-button
-            color="tertiary"
-            size="small"
-            *ngIf="mostrarBotonAsistenciaManual(alumno)"
-            (click)="registrarAsistenciaManual(alumno)"
-          >
-            Registrar asistencia manual
-          </ion-button>
-        </ng-container>
+                <!-- Caso: Sin Solicitud o Atendida (Registrar Manual) -->
+                <ng-container *ngIf="alumno.estado !== 'Pendiente'">
+                  <button class="btn btn-manual" (click)="registrarAsistenciaManual(alumno)">Manual</button>
+                </ng-container>
 
-        <!-- ❌ Mensaje cuando está fuera del horario -->
-        <ng-template #fueraHorario>
-          <ion-text color="medium">
-            Fuera del horario de la materia
-          </ion-text>
-        </ng-template>
-      </ion-col>
-    </ion-row>
-  </ion-grid>
+              </div>
+            </td>
+          </tr>
+
+          <tr *ngIf="alumnos.length === 0">
+            <td colspan="4" style="text-align:center; padding: 2rem; color: #666;">
+              Cargando alumnos o no hay inscritos.
+            </td>
+          </tr>
+
+        </tbody>
+      </table>
+    </div>
+  </div>
 </ion-content>

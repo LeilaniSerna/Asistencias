@@ -3,7 +3,7 @@ from db_connection import obtener_conexion
 from datetime import datetime, timedelta, time
 import traceback
 from math import radians, cos, sin, sqrt, atan2
-import requests # ✅ NECESARIO PARA LA IA
+import requests 
 
 routes = Blueprint('routes', __name__)
 
