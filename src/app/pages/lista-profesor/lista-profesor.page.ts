@@ -12,8 +12,7 @@ import {
   IonCol,
   IonButton,
   AlertController,
-  IonText
-} from '@ionic/angular/standalone';
+  IonText, IonButtons } from '@ionic/angular/standalone';
 import { AlumnosService } from 'src/app/servicios/alumnos.service';
 import { AsistenciasProfesorService } from 'src/app/servicios/asistencias-profesor.service';
 
@@ -22,7 +21,7 @@ import { AsistenciasProfesorService } from 'src/app/servicios/asistencias-profes
   templateUrl: './lista-profesor.page.html',
   styleUrls: ['./lista-profesor.page.scss'],
   standalone: true,
-  imports: [
+  imports: [IonButtons, 
     IonContent,
     IonHeader,
     IonTitle,
