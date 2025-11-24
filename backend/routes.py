@@ -3,8 +3,12 @@ from db_connection import obtener_conexion
 from datetime import datetime, timedelta, time
 import traceback
 from math import radians, cos, sin, sqrt, atan2
+import requests # ✅ NECESARIO PARA LA IA
 
 routes = Blueprint('routes', __name__)
+
+# --- CONFIGURACIÓN IA ---
+MODEL_API_URL = "https://alumnos-riesgo.onrender.com/predict"
 
 # --- UTILIDADES ---
 def calcular_distancia(lat1, lon1, lat2, lon2):
@@ -16,7 +20,57 @@ def calcular_distancia(lat1, lon1, lat2, lon2):
     c = 2 * atan2(sqrt(a), sqrt(1 - a))
     return R * c
 
-# --- 1. RUTAS GENERALES (Login, etc) ---
+def obtener_features_y_prediccion(alumno_id):
+    """
+    Calcula métricas SQL y consulta la API de IA en Render.
+    """
+    conexion = obtener_conexion()
+    cursor = conexion.cursor(dictionary=True)
+    try:
+        # 1. Ingeniería de características (SQL)
+        query = """
+            SELECT
+                (SELECT COALESCE(AVG(calificacion), 0) FROM calificaciones WHERE alumno_id = %s) as PreviousGrade,
+                COALESCE(SUM(CASE WHEN estado = 'Retardo' THEN 1 ELSE 0 END), 0) as Retardos,
+                COALESCE(SUM(CASE WHEN estado = 'Injustificado' THEN 1 ELSE 0 END), 0) as Injustificadas,
+                COUNT(id) as TotalAsistencias
+            FROM asistencias
+            WHERE alumno_id = %s
+        """
+        cursor.execute(query, (alumno_id, alumno_id))
+        stats = cursor.fetchone()
+
+        if not stats or stats['TotalAsistencias'] == 0:
+            # Si no hay datos suficientes, asumimos riesgo 0
+            return {"is_in_risk": 0, "risk_probability": 0.0, "message": "Datos insuficientes"}
+
+        # Calcular tasas
+        tasa_retardos = stats['Retardos'] / stats['TotalAsistencias']
+        tasa_injustificadas = stats['Injustificadas'] / stats['TotalAsistencias']
+        
+        # Preparar payload para Render
+        features = {
+            "PreviousGrade": float(stats['PreviousGrade']),
+            "TasaRetardos": float(tasa_retardos),
+            "TasaInjustificadas": float(tasa_injustificadas)
+        }
+
+        # 2. Llamada a la API
+        response = requests.post(MODEL_API_URL, json=features, timeout=3) # Timeout para no trabar si Render duerme
+        
+        if response.status_code == 200:
+            return response.json()
+        else:
+            return {"is_in_risk": 0, "message": "Error API IA"}
+
+    except Exception as e:
+        print(f"⚠️ Error IA Alumno {alumno_id}: {e}")
+        return {"is_in_risk": 0, "message": "Error interno IA"}
+    finally:
+        cursor.close()
+        conexion.close()
+
+# --- RUTAS GENERALES ---
 
 @routes.route('/alumnos', methods=['GET'])
 def obtener_alumnos():
@@ -60,7 +114,7 @@ def login():
         try: cursor.close(); conexion.close()
         except: pass
 
-# --- 2. RUTAS DEL PROFESOR (Grupos, Materias, Listas) ---
+# --- RUTAS DE PROFESOR ---
 
 @routes.route('/profesor/<int:profesor_id>/grupos', methods=['GET'])
 def obtener_grupos_profesor(profesor_id):
@@ -85,42 +139,11 @@ def obtener_grupos_profesor(profesor_id):
     finally:
         cursor.close(); conexion.close()
 
-@routes.route('/alumnos-detalle', methods=['GET'])
-def obtener_alumnos_detalle():
-    conexion = obtener_conexion()
-    cursor = conexion.cursor(dictionary=True)
-    try:
-        cursor.execute("""
-            SELECT a.id AS alumno_id, a.nombre, a.apellido, g.nombre AS grupo, m.nombre AS materia,
-            COUNT(CASE WHEN asi.estado = 'Injustificado' THEN 1 END) AS faltas
-            FROM alumnos a
-            INNER JOIN clase_alumnos ca ON a.id = ca.alumno_id
-            INNER JOIN clases c ON ca.clase_id = c.id
-            INNER JOIN grupos g ON c.grupo_id = g.id
-            INNER JOIN materias m ON c.materia_id = m.id
-            LEFT JOIN asistencias asi ON asi.alumno_id = a.id AND asi.clase_id = c.id AND asi.estado = 'Injustificado'
-            GROUP BY a.id, a.nombre, a.apellido, g.nombre, m.nombre
-            ORDER BY g.nombre, a.nombre, a.apellido;
-        """)
-        resultados = cursor.fetchall()
-        alumnos = {}
-        for row in resultados:
-            aid = row['alumno_id']
-            if aid not in alumnos:
-                alumnos[aid] = {"nombre_completo": f"{row['nombre']} {row['apellido']}", "grupo": row['grupo'], "materias": []}
-            alumnos[aid]["materias"].append({"nombre": row['materia'], "faltas": row['faltas']})
-        return jsonify(list(alumnos.values())), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-    finally:
-        cursor.close(); conexion.close()
-
 @routes.route('/profesor/<int:profesor_id>/grupos/<int:grupo_id>/materias', methods=['GET'])
 def obtener_materias_por_profesor_y_grupo(profesor_id, grupo_id):
     conexion = obtener_conexion()
     cursor = conexion.cursor(dictionary=True)
     try:
-        # Incluimos c.id AS clase_id para las calificaciones
         cursor.execute("""
             SELECT c.id AS clase_id, m.nombre AS materia, s.dia_semana, s.hora_inicio, s.hora_fin
             FROM clases c
@@ -154,6 +177,7 @@ def obtener_materias_por_profesor_y_grupo(profesor_id, grupo_id):
 def obtener_alumnos_con_solicitudes():
     grupo_id = request.args.get('grupoId')
     materia_nombre = request.args.get('materiaNombre')
+    
     if not grupo_id or not materia_nombre: return jsonify({"error": "Faltan datos"}), 400
     
     conexion = obtener_conexion()
@@ -171,9 +195,27 @@ def obtener_alumnos_con_solicitudes():
         """, (grupo_id, materia_nombre))
         alumnos = cursor.fetchall()
         
-        res = [{"alumno_id": a['alumno_id'], "nombre": f"{a['nombre']} {a['apellido']}", "estado": a['estado'] or "Pendiente", "solicitud_id": a['solicitud_id'], "clase_id": a['clase_id']} for a in alumnos]
-        return jsonify(res), 200
+        resultados = []
+        for alumno in alumnos:
+            # --- INTEGRACIÓN IA: Calcular Riesgo por Alumno ---
+            ia_data = obtener_features_y_prediccion(alumno['alumno_id'])
+            if isinstance(ia_data, tuple): ia_data = ia_data[0] # Manejo de tupla si retorna status
+
+            resultados.append({
+                "alumno_id": alumno['alumno_id'],
+                "nombre": f"{alumno['nombre']} {alumno['apellido']}",
+                "estado": alumno['estado'] or "Sin solicitud", # Normalizamos 'Sin solicitud'
+                "solicitud_id": alumno.get('solicitud_id'),
+                "clase_id": alumno['clase_id'],
+                # Datos IA
+                "ia_risk": ia_data.get('is_in_risk', 0),
+                "ia_prob": round(ia_data.get('risk_probability', 0.0) * 100, 1),
+                "ia_msg": ia_data.get('message', '')
+            })
+
+        return jsonify(resultados), 200
     except Exception as e:
+        print("Error en alumnos-solicitudes:", e)
         return jsonify({"error": str(e)}), 500
     finally:
         cursor.close(); conexion.close()
@@ -247,9 +289,7 @@ def verificar_faltas():
     finally:
         cursor.close(); conexion.close()
 
-
-# --- 3. RUTAS DEL ALUMNO ---
-
+# --- RUTAS DE ALUMNO ---
 @routes.route('/usuario/<int:usuario_id>/alumno-id', methods=['GET'])
 def obtener_alumno_id_por_usuario(usuario_id):
     conexion = obtener_conexion()
@@ -399,9 +439,7 @@ def obtener_calificaciones_resumen(alumno_id):
         cursor.close(); conexion.close()
 
 
-# -------------------------------------------------------------
-# 4. RUTAS DE CAPTURA CALIFICACIONES (PROFESOR)
-# -------------------------------------------------------------
+# --- RUTAS DE CAPTURA CALIFICACIONES (PROFESOR) ---
 
 @routes.route('/profesor/clase/<int:clase_id>/alumnos-calificaciones', methods=['GET'])
 def obtener_alumnos_para_calificar(clase_id):
@@ -422,13 +460,22 @@ def obtener_alumnos_para_calificar(clase_id):
         """
         cursor.execute(query, (periodo, clase_id))
         alumnos = cursor.fetchall()
-
+        
+        alumnos_con_ia = []
         for alumno in alumnos:
+            # --- INTEGRACIÓN IA PARA CALIFICACIONES (Opcional si quieres riesgo aquí también) ---
+            # Reutilizamos la misma función para mostrar alerta si ya viene mal
+            ia_data, _ = obtener_features_y_prediccion(alumno['alumno_id'])
+            
+            alumno['ia_risk'] = ia_data.get('is_in_risk', 0)
+            alumno['ia_msg'] = ia_data.get('message', '')
+
             if alumno['calificacion'] is not None:
                 alumno['calificacion'] = float(alumno['calificacion'])
             alumno['guardado'] = True if alumno['calificacion'] is not None else False
+            alumnos_con_ia.append(alumno)
 
-        return jsonify(alumnos), 200
+        return jsonify(alumnos_con_ia), 200
     except Exception as e:
         print("Error:", e)
         return jsonify({"error": str(e)}), 500
@@ -436,7 +483,7 @@ def obtener_alumnos_para_calificar(clase_id):
         cursor.close(); conexion.close()
 
 @routes.route('/profesor/guardar-calificacion', methods=['POST'])
-def guardar_calificacion():
+def guardar_calificacion_profesor():
     conexion = obtener_conexion()
     cursor = conexion.cursor(dictionary=True)
     data = request.get_json()
