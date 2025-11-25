@@ -21,6 +21,9 @@ interface AlumnoCalificacion {
   observaciones: string;
   guardado: boolean;
   modificado?: boolean;
+  // --- INTEGRACIÓN IA: Campos nuevos ---
+  ia_risk?: number; // 0 = Bajo Riesgo, 1 = Alto Riesgo
+  ia_msg?: string;  // Mensaje de detalle de la IA
 }
 
 @Component({
@@ -68,6 +71,7 @@ export class CapturaCalificacionesPage implements OnInit {
       `${this.apiUrl}/profesor/clase/${this.claseId}/alumnos-calificaciones?periodo=${this.periodoSeleccionado}`
     ).subscribe({
       next: (res) => {
+        // Mapeamos la respuesta asegurando que modificado inicie en false
         this.alumnos = res.map(a => ({...a, modificado: false}));
         this.loading = false;
       },

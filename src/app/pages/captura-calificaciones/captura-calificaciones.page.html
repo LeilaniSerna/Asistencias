@@ -40,11 +40,25 @@
         </thead>
         <tbody>
           
-          <tr *ngFor="let alumno of alumnos">
+          <!-- MODIFICACIÓN: Clase condicional para destacar toda la fila si hay riesgo -->
+          <tr *ngFor="let alumno of alumnos" [class.row-in-risk]="alumno.ia_risk === 1">
             <td>
               <div class="student-info">
+                <!-- MODIFICACIÓN: Punto de Semáforo (Verde/Rojo) -->
+                <span class="risk-dot" 
+                      [ngClass]="{'risk-low': alumno.ia_risk === 0, 'risk-high': alumno.ia_risk === 1}"
+                      title="Indicador de Riesgo IA">
+                </span>
+
                 <span class="student-name">{{ alumno.nombre }} {{ alumno.apellido }}</span>
                 <span class="student-id">{{ alumno.matricula }}</span>
+              </div>
+
+              <!-- MODIFICACIÓN: Alerta de Texto IA -->
+              <div class="risk-alert" *ngIf="alumno.ia_risk === 1">
+                <ion-icon name="alert-circle" color="danger"></ion-icon>
+                Riesgo de deserción: ¡ALERTA!
+                <span class="risk-message" *ngIf="alumno.ia_msg">({{ alumno.ia_msg }})</span>
               </div>
             </td>
             

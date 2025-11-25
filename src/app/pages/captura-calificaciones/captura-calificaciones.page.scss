@@ -71,11 +71,14 @@ ion-content { --background: var(--gris-fondo); }
   thead { background-color: var(--azul-utc); color: white; 
     th { padding: 12px 15px; text-align: left; font-weight: 600; font-size: 0.9rem; } 
   }
+  
+  /* Se modifica para permitir el resaltado de filas de riesgo */
+  tbody tr { transition: background-color 0.3s ease; }
   tbody tr:hover { background-color: #f9fcf9; }
   tbody td { padding: 10px 15px; border-bottom: 1px solid var(--borde); vertical-align: middle; }
 }
 
-.student-info { display: flex; flex-direction: column; 
+.student-info { display: flex; flex-direction: column; position: relative;
   .student-name { font-weight: 600; color: #222; font-size: 0.95rem; }
   .student-id { font-size: 0.8rem; color: #888; }
 }
@@ -112,4 +115,60 @@ ion-content { --background: var(--gris-fondo); }
   font-size: 0.95rem; font-weight: 700; border-radius: 6px; cursor: pointer;
   display: flex; align-items: center; box-shadow: 0 4px 8px rgba(159, 195, 76, 0.3);
   &:hover { transform: translateY(-2px); filter: brightness(1.05); }
+}
+
+/* --- ESTILOS NUEVOS: INTELIGENCIA ARTIFICIAL --- */
+
+/* Fila de la tabla destacada en rojo suave */
+.row-in-risk {
+  background-color: #fff0f0 !important; 
+}
+.grades-table tbody tr.row-in-risk:hover {
+  background-color: #ffe5e5 !important;
+}
+
+/* El punto de color (Semáforo) */
+.risk-dot {
+  display: inline-block;
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  position: absolute; /* Posicionarlo a la izquierda del nombre */
+  left: -15px; top: 5px;
+  /* Alternativamente, si no se usa absolute, usar margin-right */
+  /* margin-right: 8px; vertical-align: middle; position: static; */
+}
+
+/* Ajuste para que el punto no se salga si hay poco padding */
+.student-info { margin-left: 10px; } 
+
+.risk-low {
+  background-color: var(--verde-exito); /* Verde: No hay riesgo */
+}
+.risk-high {
+  background-color: #ff3860; /* Rojo/Rosa fuerte: ALTO riesgo */
+  box-shadow: 0 0 5px rgba(255, 56, 96, 0.5); /* Brillo suave */
+}
+
+/* Alerta de Riesgo Texto Completo */
+.risk-alert {
+  margin-top: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #c70039;
+  background: rgba(255, 255, 255, 0.6);
+  padding: 2px 5px; border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+
+  ion-icon {
+    margin-right: 4px;
+    font-size: 0.9rem;
+    color: #ff3860;
+  }
+  .risk-message {
+    font-weight: 400;
+    color: #666;
+    margin-left: 4px;
+    font-style: italic;
+  }
 }
