@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, time
 import traceback
 from math import radians, cos, sin, sqrt, atan2
 import requests 
+from requests.exceptions import ReadTimeout, RequestException # <--- CAMBIO 1: Importación necesaria
 
 routes = Blueprint('routes', __name__)
 
@@ -23,6 +24,7 @@ def calcular_distancia(lat1, lon1, lat2, lon2):
 def obtener_features_y_prediccion(alumno_id):
     """
     Calcula métricas SQL y consulta la API de IA en Render.
+    Siempre retorna un diccionario, nunca falla rompiendo la app.
     """
     conexion = obtener_conexion()
     cursor = conexion.cursor(dictionary=True)
@@ -56,15 +58,24 @@ def obtener_features_y_prediccion(alumno_id):
         }
 
         # 2. Llamada a la API
-        response = requests.post(MODEL_API_URL, json=features, timeout=3) # Timeout para no trabar si Render duerme
+        # CAMBIO 2: Manejo robusto de errores de red y timeout
+        try:
+            response = requests.post(MODEL_API_URL, json=features, timeout=4) # Timeout de 4 segs
+            
+            if response.status_code == 200:
+                return response.json()
+            else:
+                return {"is_in_risk": 0, "message": f"Error API IA: {response.status_code}"}
         
-        if response.status_code == 200:
-            return response.json()
-        else:
-            return {"is_in_risk": 0, "message": "Error API IA"}
+        except ReadTimeout:
+            print(f"⚠️ Timeout IA Alumno {alumno_id}")
+            return {"is_in_risk": 0, "message": "IA lenta (Timeout)"}
+        except RequestException as e:
+            print(f"⚠️ Error Conexión IA Alumno {alumno_id}: {e}")
+            return {"is_in_risk": 0, "message": "IA no disponible"}
 
     except Exception as e:
-        print(f"⚠️ Error IA Alumno {alumno_id}: {e}")
+        print(f"⚠️ Error Interno IA Alumno {alumno_id}: {e}")
         return {"is_in_risk": 0, "message": "Error interno IA"}
     finally:
         cursor.close()
@@ -198,13 +209,13 @@ def obtener_alumnos_con_solicitudes():
         resultados = []
         for alumno in alumnos:
             # --- INTEGRACIÓN IA: Calcular Riesgo por Alumno ---
+            # CAMBIO 3: Llamada directa, sin lógica extraña de tuplas
             ia_data = obtener_features_y_prediccion(alumno['alumno_id'])
-            if isinstance(ia_data, tuple): ia_data = ia_data[0] # Manejo de tupla si retorna status
-
+            
             resultados.append({
                 "alumno_id": alumno['alumno_id'],
                 "nombre": f"{alumno['nombre']} {alumno['apellido']}",
-                "estado": alumno['estado'] or "Sin solicitud", # Normalizamos 'Sin solicitud'
+                "estado": alumno['estado'] or "Sin solicitud", 
                 "solicitud_id": alumno.get('solicitud_id'),
                 "clase_id": alumno['clase_id'],
                 # Datos IA
@@ -463,10 +474,11 @@ def obtener_alumnos_para_calificar(clase_id):
         
         alumnos_con_ia = []
         for alumno in alumnos:
-            # --- INTEGRACIÓN IA PARA CALIFICACIONES (Opcional si quieres riesgo aquí también) ---
-            # Reutilizamos la misma función para mostrar alerta si ya viene mal
-            ia_data, _ = obtener_features_y_prediccion(alumno['alumno_id'])
+            # --- INTEGRACIÓN IA PARA CALIFICACIONES ---
+            # CAMBIO 4: Eliminamos la desestructuración de tupla (el error principal)
+            ia_data = obtener_features_y_prediccion(alumno['alumno_id'])
             
+            # Ahora accedemos directamente al diccionario
             alumno['ia_risk'] = ia_data.get('is_in_risk', 0)
             alumno['ia_msg'] = ia_data.get('message', '')
 
@@ -477,7 +489,9 @@ def obtener_alumnos_para_calificar(clase_id):
 
         return jsonify(alumnos_con_ia), 200
     except Exception as e:
-        print("Error:", e)
+        print("Error en calificaciones:", e)
+        # Importante: Mostrar el error en logs si falla
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
     finally:
         cursor.close(); conexion.close()
