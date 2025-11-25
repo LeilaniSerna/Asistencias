@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, time
 import traceback
 from math import radians, cos, sin, sqrt, atan2
 import requests 
-from requests.exceptions import ReadTimeout, RequestException # <--- CAMBIO 1: Importación necesaria
+from requests.exceptions import ReadTimeout, RequestException 
 
 routes = Blueprint('routes', __name__)
 
@@ -21,9 +21,6 @@ def calcular_distancia(lat1, lon1, lat2, lon2):
     c = 2 * atan2(sqrt(a), sqrt(1 - a))
     return R * c
 
-
-
-
 def obtener_features_y_prediccion(alumno_id):
     """
     Calcula métricas SQL y consulta la API de IA en Render.
@@ -32,9 +29,10 @@ def obtener_features_y_prediccion(alumno_id):
     cursor = conexion.cursor(dictionary=True)
     try:
         # 1. Ingeniería de características (SQL)
+        # NOTA: Quitamos COALESCE de PreviousGrade para poder detectar cuando es NULL (sin calif)
         query = """
             SELECT
-                (SELECT COALESCE(AVG(calificacion), 0) FROM calificaciones WHERE alumno_id = %s) as PreviousGrade,
+                (SELECT AVG(calificacion) FROM calificaciones WHERE alumno_id = %s) as PreviousGrade,
                 COALESCE(SUM(CASE WHEN estado = 'Retardo' THEN 1 ELSE 0 END), 0) as Retardos,
                 COALESCE(SUM(CASE WHEN estado = 'Injustificado' THEN 1 ELSE 0 END), 0) as Injustificadas,
                 COUNT(id) as TotalAsistencias
@@ -44,22 +42,35 @@ def obtener_features_y_prediccion(alumno_id):
         cursor.execute(query, (alumno_id, alumno_id))
         stats = cursor.fetchone()
 
+        # CASO 1: Sin asistencias registradas -> No podemos predecir
         if not stats or stats['TotalAsistencias'] == 0:
-            return {"is_in_risk": 0, "risk_probability": 0.0, "message": "Datos insuficientes", "status": "ok"}
+            return {"is_in_risk": 0, "risk_probability": 0.0, "message": "Falta asistencia", "status": "ok"}
 
+        # CASO 2: Sin calificaciones registradas -> No podemos predecir (NUEVO)
+        if stats['PreviousGrade'] is None:
+             return {"is_in_risk": 0, "risk_probability": 0.0, "message": "Sin calif.", "status": "ok"}
+
+        # PREPARACIÓN DE DATOS
         tasa_retardos = stats['Retardos'] / stats['TotalAsistencias']
         tasa_injustificadas = stats['Injustificadas'] / stats['TotalAsistencias']
         
+        # CASO 3: Corrección de Escala (0-10 a 0-100)
+        raw_grade = float(stats['PreviousGrade'])
+        grade_for_ai = raw_grade * 10 if raw_grade <= 10.0 and raw_grade > 0 else raw_grade
+
         features = {
-            "PreviousGrade": float(stats['PreviousGrade']),
+            "PreviousGrade": grade_for_ai,
             "TasaRetardos": float(tasa_retardos),
             "TasaInjustificadas": float(tasa_injustificadas)
         }
+        
+        # DEBUG: Imprimir en logs de Railway para verificar
+        print(f"🤖 IA Input Alumno {alumno_id}: Calif={grade_for_ai} (Orig:{raw_grade})")
 
         # 2. Llamada a la API
         try:
-            # CAMBIO: Timeout reducido a 1 segundo para no bloquear el servidor
-            response = requests.post(MODEL_API_URL, json=features, timeout=1) 
+            # Timeout aumentado a 2s para dar margen a Render
+            response = requests.post(MODEL_API_URL, json=features, timeout=2) 
             
             if response.status_code == 200:
                 data = response.json()
@@ -70,11 +81,10 @@ def obtener_features_y_prediccion(alumno_id):
         
         except ReadTimeout:
             print(f"⚠️ Timeout IA Alumno {alumno_id}")
-            # Retornamos status='timeout' para avisar al bucle principal
             return {"is_in_risk": 0, "message": "IA lenta", "status": "timeout"}
         except RequestException as e:
             print(f"⚠️ Error Conexión IA Alumno {alumno_id}: {e}")
-            return {"is_in_risk": 0, "message": "IA no disponible", "status": "error"}
+            return {"is_in_risk": 0, "message": "IA Off", "status": "error"}
 
     except Exception as e:
         print(f"⚠️ Error Interno IA Alumno {alumno_id}: {e}")
@@ -82,8 +92,6 @@ def obtener_features_y_prediccion(alumno_id):
     finally:
         cursor.close()
         conexion.close()
-
-
 
 
 @routes.route('/login', methods=['POST'])
@@ -198,8 +206,6 @@ def obtener_alumnos_con_solicitudes():
         
         resultados = []
         for alumno in alumnos:
-            # --- INTEGRACIÓN IA: Calcular Riesgo por Alumno ---
-            # CAMBIO 3: Llamada directa, sin lógica extraña de tuplas
             ia_data = obtener_features_y_prediccion(alumno['alumno_id'])
             
             resultados.append({
@@ -208,7 +214,6 @@ def obtener_alumnos_con_solicitudes():
                 "estado": alumno['estado'] or "Sin solicitud", 
                 "solicitud_id": alumno.get('solicitud_id'),
                 "clase_id": alumno['clase_id'],
-                # Datos IA
                 "ia_risk": ia_data.get('is_in_risk', 0),
                 "ia_prob": round(ia_data.get('risk_probability', 0.0) * 100, 1),
                 "ia_msg": ia_data.get('message', '')
@@ -463,24 +468,18 @@ def obtener_alumnos_para_calificar(clase_id):
         alumnos = cursor.fetchall()
         
         alumnos_con_ia = []
-        
-        # BANDERA DE SEGURIDAD: Si la IA falla una vez, dejamos de intentarlo
         ia_desactivada_por_fallo = False 
 
         for alumno in alumnos:
-            # Lógica del Interruptor
             if ia_desactivada_por_fallo:
-                # Si ya falló antes, ni siquiera intentamos llamar a la API
                 alumno['ia_risk'] = 0
                 alumno['ia_msg'] = "IA Temp. Desactivada"
             else:
-                # Intentamos llamar a la IA
                 ia_data = obtener_features_y_prediccion(alumno['alumno_id'])
                 
                 alumno['ia_risk'] = ia_data.get('is_in_risk', 0)
                 alumno['ia_msg'] = ia_data.get('message', '')
 
-                # Si detectamos timeout, activamos la bandera para los siguientes alumnos
                 if ia_data.get('status') == 'timeout':
                     print("🛑 IA lenta detectada. Desactivando para el resto de la lista.")
                     ia_desactivada_por_fallo = True
