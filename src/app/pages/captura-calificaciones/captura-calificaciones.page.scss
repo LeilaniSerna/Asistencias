@@ -8,36 +8,27 @@
   --amarillo-pendiente: #ffc409;
 }
 
-/* --- CORRECCIÓN DEL HEADER (Verde UTC y Letras Blancas) --- */
-
 ion-toolbar {
-  /* Forzamos el fondo verde institucional */
   --background: #9fc34c !important; 
-  /* Forzamos el color de texto base a blanco */
   --color: #ffffff !important;
   color: #ffffff !important;
   font-size: 1.2rem;
 }
 
-/* Aseguramos que el título sea blanco */
 ion-title {
   font-weight: 600;
   font-size: 1.1rem;
   color: #ffffff !important;
 }
 
-/* Aseguramos que la flecha de regreso sea blanca */
 ion-back-button {
   --color: #ffffff !important;
   color: #ffffff !important;
-  /* A veces Ionic usa opacidad, esto la quita para que sea blanco puro */
   opacity: 1 !important; 
 }
 ion-buttons {
   color: #ffffff !important;
 }
-
-/* --- ESTILOS DEL CONTENIDO --- */
 
 ion-content { --background: var(--gris-fondo); }
 
@@ -46,65 +37,60 @@ ion-content { --background: var(--gris-fondo); }
   background: var(--blanco); border-radius: 12px;
   box-shadow: 0 8px 20px rgba(0,0,0,0.05);
   overflow: hidden; padding-bottom: 20px;
-  @media(max-width: 768px) { margin: 10px; width: auto; }
 }
+@media(max-width: 768px) { .main-container { margin: 10px; width: auto; } }
 
 .view-header {
   padding: 20px 25px; border-bottom: 2px solid var(--gris-fondo);
   display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 15px;
-  
-  .title-group h2 { margin: 0; color: var(--azul-utc); font-size: 1.6rem; font-weight: 700; }
-  .title-group p { margin: 4px 0 0; color: #666; font-size: 1rem; }
 }
+.view-header .title-group h2 { margin: 0; color: var(--azul-utc); font-size: 1.6rem; font-weight: 700; }
+.view-header .title-group p { margin: 4px 0 0; color: #666; font-size: 1rem; }
 
 .period-selector {
   display: flex; align-items: center; gap: 10px;
   background: #f0f8ff; padding: 8px 12px; border-radius: 8px; border: 1px solid #cce0ff;
-  label { font-weight: 600; color: var(--azul-utc); font-size: 0.9rem; }
-  select { padding: 6px 10px; border: 1px solid var(--azul-utc); border-radius: 6px; font-size: 0.95rem; color: var(--azul-utc); font-weight: 600; cursor: pointer; outline: none; background: white; }
 }
+.period-selector label { font-weight: 600; color: var(--azul-utc); font-size: 0.9rem; }
+.period-selector select { padding: 6px 10px; border: 1px solid var(--azul-utc); border-radius: 6px; font-size: 0.95rem; color: var(--azul-utc); font-weight: 600; cursor: pointer; outline: none; background: white; }
 
 .table-responsive { width: 100%; overflow-x: auto; }
 
 .grades-table {
   width: 100%; border-collapse: collapse; margin-top: 0;
-  thead { background-color: var(--azul-utc); color: white; 
-    th { padding: 12px 15px; text-align: left; font-weight: 600; font-size: 0.9rem; } 
-  }
-  
-  /* Se modifica para permitir el resaltado de filas de riesgo */
-  tbody tr { transition: background-color 0.3s ease; }
-  tbody tr:hover { background-color: #f9fcf9; }
-  tbody td { padding: 10px 15px; border-bottom: 1px solid var(--borde); vertical-align: middle; }
 }
+.grades-table thead { background-color: var(--azul-utc); color: white; }
+.grades-table thead th { padding: 12px 15px; text-align: left; font-weight: 600; font-size: 0.9rem; } 
+.grades-table tbody tr { transition: background-color 0.3s ease; }
+.grades-table tbody tr:hover { background-color: #f9fcf9; }
+.grades-table tbody td { padding: 10px 15px; border-bottom: 1px solid var(--borde); vertical-align: middle; }
 
-.student-info { display: flex; flex-direction: column; position: relative;
-  .student-name { font-weight: 600; color: #222; font-size: 0.95rem; }
-  .student-id { font-size: 0.8rem; color: #888; }
-}
+.student-info { display: flex; flex-direction: column; position: relative; margin-left: 10px; }
+.student-info .student-name { font-weight: 600; color: #222; font-size: 0.95rem; }
+.student-info .student-id { font-size: 0.8rem; color: #888; }
 
 .grade-input-container { display: flex; justify-content: center; }
 .grade-input {
   width: 70px; padding: 8px; border: 1px solid #ccc; border-radius: 6px;
   text-align: center; font-size: 1rem; font-weight: bold; color: var(--azul-utc);
-  &:focus { border-color: var(--verde-utc); outline: none; background: #fafff5; }
 }
+.grade-input:focus { border-color: var(--verde-utc); outline: none; background: #fafff5; }
 
 .obs-input {
   width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 0.9rem;
-  &:focus { border-color: var(--azul-utc); outline: none; }
 }
+.obs-input:focus { border-color: var(--azul-utc); outline: none; }
 
 .status-badge {
   font-size: 0.7rem; padding: 3px 8px; border-radius: 10px; font-weight: 600; display: inline-block; min-width: 70px;
-  &.status-saved { background-color: #d4edda; color: #155724; }
-  &.status-pending { background-color: #fff3cd; color: #856404; }
 }
+.status-badge.status-saved { background-color: #d4edda; color: #155724; }
+.status-badge.status-pending { background-color: #fff3cd; color: #856404; }
 
 .btn-icon-save {
   background: none; border: none; color: var(--verde-utc); font-size: 1.4rem; cursor: pointer; margin-left: 5px; vertical-align: middle;
-  &:hover { transform: scale(1.1); }
 }
+.btn-icon-save:hover { transform: scale(1.1); }
 
 .actions-footer {
   padding: 15px 25px; display: flex; justify-content: flex-end; border-top: 1px solid var(--borde); margin-top: 5px;
@@ -114,61 +100,23 @@ ion-content { --background: var(--gris-fondo); }
   background: var(--verde-utc); color: white; border: none; padding: 10px 25px;
   font-size: 0.95rem; font-weight: 700; border-radius: 6px; cursor: pointer;
   display: flex; align-items: center; box-shadow: 0 4px 8px rgba(159, 195, 76, 0.3);
-  &:hover { transform: translateY(-2px); filter: brightness(1.05); }
 }
+.btn-save-all:hover { transform: translateY(-2px); filter: brightness(1.05); }
 
-/* --- ESTILOS NUEVOS: INTELIGENCIA ARTIFICIAL --- */
+.row-in-risk { background-color: #fff0f0 !important; }
+.grades-table tbody tr.row-in-risk:hover { background-color: #ffe5e5 !important; }
 
-/* Fila de la tabla destacada en rojo suave */
-.row-in-risk {
-  background-color: #fff0f0 !important; 
-}
-.grades-table tbody tr.row-in-risk:hover {
-  background-color: #ffe5e5 !important;
-}
-
-/* El punto de color (Semáforo) */
 .risk-dot {
-  display: inline-block;
-  width: 10px; height: 10px;
-  border-radius: 50%;
-  position: absolute; /* Posicionarlo a la izquierda del nombre */
-  left: -15px; top: 5px;
-  /* Alternativamente, si no se usa absolute, usar margin-right */
-  /* margin-right: 8px; vertical-align: middle; position: static; */
+  display: inline-block; width: 10px; height: 10px; border-radius: 50%;
+  position: absolute; left: -15px; top: 5px;
 }
+.risk-low { background-color: var(--verde-exito); }
+.risk-high { background-color: #ff3860; box-shadow: 0 0 5px rgba(255, 56, 96, 0.5); }
 
-/* Ajuste para que el punto no se salga si hay poco padding */
-.student-info { margin-left: 10px; } 
-
-.risk-low {
-  background-color: var(--verde-exito); /* Verde: No hay riesgo */
-}
-.risk-high {
-  background-color: #ff3860; /* Rojo/Rosa fuerte: ALTO riesgo */
-  box-shadow: 0 0 5px rgba(255, 56, 96, 0.5); /* Brillo suave */
-}
-
-/* Alerta de Riesgo Texto Completo */
 .risk-alert {
-  margin-top: 6px;
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: #c70039;
-  background: rgba(255, 255, 255, 0.6);
-  padding: 2px 5px; border-radius: 4px;
-  display: inline-flex;
-  align-items: center;
-
-  ion-icon {
-    margin-right: 4px;
-    font-size: 0.9rem;
-    color: #ff3860;
-  }
-  .risk-message {
-    font-weight: 400;
-    color: #666;
-    margin-left: 4px;
-    font-style: italic;
-  }
+  margin-top: 6px; font-size: 0.75rem; font-weight: 700; color: #c70039;
+  background: rgba(255, 255, 255, 0.6); padding: 2px 5px; border-radius: 4px;
+  display: inline-flex; align-items: center;
 }
+.risk-alert ion-icon { margin-right: 4px; font-size: 0.9rem; color: #ff3860; }
+.risk-alert .risk-message { font-weight: 400; color: #666; margin-left: 4px; font-style: italic; }
