@@ -21,10 +21,12 @@ def calcular_distancia(lat1, lon1, lat2, lon2):
     c = 2 * atan2(sqrt(a), sqrt(1 - a))
     return R * c
 
+
+
+
 def obtener_features_y_prediccion(alumno_id):
     """
     Calcula métricas SQL y consulta la API de IA en Render.
-    Siempre retorna un diccionario, nunca falla rompiendo la app.
     """
     conexion = obtener_conexion()
     cursor = conexion.cursor(dictionary=True)
@@ -43,14 +45,11 @@ def obtener_features_y_prediccion(alumno_id):
         stats = cursor.fetchone()
 
         if not stats or stats['TotalAsistencias'] == 0:
-            # Si no hay datos suficientes, asumimos riesgo 0
-            return {"is_in_risk": 0, "risk_probability": 0.0, "message": "Datos insuficientes"}
+            return {"is_in_risk": 0, "risk_probability": 0.0, "message": "Datos insuficientes", "status": "ok"}
 
-        # Calcular tasas
         tasa_retardos = stats['Retardos'] / stats['TotalAsistencias']
         tasa_injustificadas = stats['Injustificadas'] / stats['TotalAsistencias']
         
-        # Preparar payload para Render
         features = {
             "PreviousGrade": float(stats['PreviousGrade']),
             "TasaRetardos": float(tasa_retardos),
@@ -58,43 +57,34 @@ def obtener_features_y_prediccion(alumno_id):
         }
 
         # 2. Llamada a la API
-        # CAMBIO 2: Manejo robusto de errores de red y timeout
         try:
-            response = requests.post(MODEL_API_URL, json=features, timeout=4) # Timeout de 4 segs
+            # CAMBIO: Timeout reducido a 1 segundo para no bloquear el servidor
+            response = requests.post(MODEL_API_URL, json=features, timeout=1) 
             
             if response.status_code == 200:
-                return response.json()
+                data = response.json()
+                data["status"] = "ok"
+                return data
             else:
-                return {"is_in_risk": 0, "message": f"Error API IA: {response.status_code}"}
+                return {"is_in_risk": 0, "message": f"Error API: {response.status_code}", "status": "error"}
         
         except ReadTimeout:
             print(f"⚠️ Timeout IA Alumno {alumno_id}")
-            return {"is_in_risk": 0, "message": "IA lenta (Timeout)"}
+            # Retornamos status='timeout' para avisar al bucle principal
+            return {"is_in_risk": 0, "message": "IA lenta", "status": "timeout"}
         except RequestException as e:
             print(f"⚠️ Error Conexión IA Alumno {alumno_id}: {e}")
-            return {"is_in_risk": 0, "message": "IA no disponible"}
+            return {"is_in_risk": 0, "message": "IA no disponible", "status": "error"}
 
     except Exception as e:
         print(f"⚠️ Error Interno IA Alumno {alumno_id}: {e}")
-        return {"is_in_risk": 0, "message": "Error interno IA"}
+        return {"is_in_risk": 0, "message": "Error interno", "status": "error"}
     finally:
         cursor.close()
         conexion.close()
 
-# --- RUTAS GENERALES ---
 
-@routes.route('/alumnos', methods=['GET'])
-def obtener_alumnos():
-    conexion = obtener_conexion()
-    cursor = conexion.cursor(dictionary=True)
-    try:
-        cursor.execute("SELECT * FROM alumnos")
-        alumnos = cursor.fetchall()
-        return jsonify(alumnos), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-    finally:
-        cursor.close(); conexion.close()
+
 
 @routes.route('/login', methods=['POST'])
 def login():
@@ -473,14 +463,27 @@ def obtener_alumnos_para_calificar(clase_id):
         alumnos = cursor.fetchall()
         
         alumnos_con_ia = []
+        
+        # BANDERA DE SEGURIDAD: Si la IA falla una vez, dejamos de intentarlo
+        ia_desactivada_por_fallo = False 
+
         for alumno in alumnos:
-            # --- INTEGRACIÓN IA PARA CALIFICACIONES ---
-            # CAMBIO 4: Eliminamos la desestructuración de tupla (el error principal)
-            ia_data = obtener_features_y_prediccion(alumno['alumno_id'])
-            
-            # Ahora accedemos directamente al diccionario
-            alumno['ia_risk'] = ia_data.get('is_in_risk', 0)
-            alumno['ia_msg'] = ia_data.get('message', '')
+            # Lógica del Interruptor
+            if ia_desactivada_por_fallo:
+                # Si ya falló antes, ni siquiera intentamos llamar a la API
+                alumno['ia_risk'] = 0
+                alumno['ia_msg'] = "IA Temp. Desactivada"
+            else:
+                # Intentamos llamar a la IA
+                ia_data = obtener_features_y_prediccion(alumno['alumno_id'])
+                
+                alumno['ia_risk'] = ia_data.get('is_in_risk', 0)
+                alumno['ia_msg'] = ia_data.get('message', '')
+
+                # Si detectamos timeout, activamos la bandera para los siguientes alumnos
+                if ia_data.get('status') == 'timeout':
+                    print("🛑 IA lenta detectada. Desactivando para el resto de la lista.")
+                    ia_desactivada_por_fallo = True
 
             if alumno['calificacion'] is not None:
                 alumno['calificacion'] = float(alumno['calificacion'])
@@ -490,7 +493,6 @@ def obtener_alumnos_para_calificar(clase_id):
         return jsonify(alumnos_con_ia), 200
     except Exception as e:
         print("Error en calificaciones:", e)
-        # Importante: Mostrar el error en logs si falla
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
     finally:
