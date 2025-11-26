@@ -22,54 +22,68 @@ def calcular_distancia(lat1, lon1, lat2, lon2):
     c = 2 * atan2(sqrt(a), sqrt(1 - a))
     return R * c
 
-def obtener_features_y_prediccion(alumno_id):
+def obtener_features_y_prediccion(alumno_id, clase_id=None):
     """
-    Calcula métricas SQL y aplica REGLAS DE NEGOCIO estrictas basadas en calificación.
-    Devuelve:
-    - is_in_risk: 0 (Verde), 1 (Naranja/Moderado), 2 (Rojo/Alto)
-    - risk_probability: Porcentaje (0.0 a 1.0)
+    Calcula métricas SQL y aplica REGLAS DE NEGOCIO.
+    AHORA FILTRA POR CLASE_ID SI SE PROPORCIONA para que coincida con la vista del profesor.
     """
     conexion = obtener_conexion()
     cursor = conexion.cursor(dictionary=True)
     try:
         # 1. Ingeniería de características (SQL)
-        query = """
-            SELECT
-                (SELECT AVG(calificacion) FROM calificaciones WHERE alumno_id = %s) as PreviousGrade,
-                COALESCE(SUM(CASE WHEN estado = 'Retardo' THEN 1 ELSE 0 END), 0) as Retardos,
-                COALESCE(SUM(CASE WHEN estado = 'Injustificado' THEN 1 ELSE 0 END), 0) as Injustificadas,
-                COUNT(id) as TotalAsistencias
-            FROM asistencias
-            WHERE alumno_id = %s
-        """
-        cursor.execute(query, (alumno_id, alumno_id))
+        # Modificamos la query para filtrar por clase_id si existe
+        if clase_id:
+            query = """
+                SELECT
+                    (SELECT AVG(calificacion) FROM calificaciones WHERE alumno_id = %s AND clase_id = %s) as PreviousGrade,
+                    COALESCE(SUM(CASE WHEN estado = 'Retardo' THEN 1 ELSE 0 END), 0) as Retardos,
+                    COALESCE(SUM(CASE WHEN estado = 'Injustificado' THEN 1 ELSE 0 END), 0) as Injustificadas,
+                    COUNT(id) as TotalAsistencias
+                FROM asistencias
+                WHERE alumno_id = %s AND clase_id = %s
+            """
+            params = (alumno_id, clase_id, alumno_id, clase_id)
+        else:
+            # Fallback a global si no hay clase (ej: vista general)
+            query = """
+                SELECT
+                    (SELECT AVG(calificacion) FROM calificaciones WHERE alumno_id = %s) as PreviousGrade,
+                    COALESCE(SUM(CASE WHEN estado = 'Retardo' THEN 1 ELSE 0 END), 0) as Retardos,
+                    COALESCE(SUM(CASE WHEN estado = 'Injustificado' THEN 1 ELSE 0 END), 0) as Injustificadas,
+                    COUNT(id) as TotalAsistencias
+                FROM asistencias
+                WHERE alumno_id = %s
+            """
+            params = (alumno_id, alumno_id)
+
+        cursor.execute(query, params)
         stats = cursor.fetchone()
 
         # CASO A: Sin datos suficientes -> Riesgo 0
         if not stats or stats['TotalAsistencias'] == 0:
             return {"is_in_risk": 0, "risk_probability": 0.0, "message": "Datos insuficientes", "status": "ok"}
         
-        # CASO B: Sin calificaciones -> Riesgo 0 (No se puede juzgar aún)
+        # CASO B: Sin calificaciones -> Riesgo 0
         if stats['PreviousGrade'] is None:
              return {"is_in_risk": 0, "risk_probability": 0.0, "message": "Sin historial", "status": "ok"}
 
         # PREPARACIÓN DE DATOS
         raw_grade = float(stats['PreviousGrade'])
         
-        # Corrección de escala (0-10 a 0-100 para la IA, aunque usaremos reglas primero)
+        # Normalización de escala (0-10 -> 0-100 para IA)
         grade_normalized = raw_grade * 10 if raw_grade <= 10.0 and raw_grade > 0 else raw_grade
+        # Escala visual (0-10) para lógica de negocio
         grade_0_10 = raw_grade if raw_grade <= 10.0 else raw_grade / 10.0
 
-        print(f"🤖 Alumno {alumno_id}: Calif={grade_0_10:.2f}")
+        print(f"🤖 Alumno {alumno_id} (Clase {clase_id}): Calif={grade_0_10:.2f}")
 
         # --- CAPA DE LÓGICA DE NEGOCIO (PRIORIDAD ALTA) ---
         
         # REGLA 1: Promedio < 8.0 -> RIESGO ALTO (ROJO)
         if grade_0_10 < 8.0:
-            # Forzamos probabilidad alta (entre 80% y 98%)
             prob_simulada = random.uniform(0.80, 0.98)
             return {
-                "is_in_risk": 2, # 2 = ALTO
+                "is_in_risk": 2, # ALTO
                 "risk_probability": prob_simulada,
                 "message": f"Promedio Crítico ({grade_0_10:.1f})",
                 "status": "ok"
@@ -77,10 +91,9 @@ def obtener_features_y_prediccion(alumno_id):
 
         # REGLA 2: Promedio 8.0 a 8.9 -> RIESGO MODERADO (NARANJA)
         elif 8.0 <= grade_0_10 < 9.0:
-            # Forzamos probabilidad media (entre 45% y 65%)
             prob_simulada = random.uniform(0.45, 0.65)
             return {
-                "is_in_risk": 1, # 1 = MODERADO
+                "is_in_risk": 1, # MODERADO
                 "risk_probability": prob_simulada,
                 "message": f"Riesgo Académico ({grade_0_10:.1f})",
                 "status": "ok"
@@ -89,14 +102,11 @@ def obtener_features_y_prediccion(alumno_id):
         # REGLA 3: Promedio >= 9.0 -> SIN RIESGO (VERDE)
         else:
             return {
-                "is_in_risk": 0, # 0 = BAJO
+                "is_in_risk": 0, # BAJO
                 "risk_probability": random.uniform(0.05, 0.20),
                 "message": "Buen Promedio",
                 "status": "ok"
             }
-            
-        # NOTA: En este enfoque, ignoramos la llamada a la IA si ya tenemos calificación,
-        # porque la regla de la universidad es estricta. Esto ahorra tiempo y errores de timeout.
 
     except Exception as e:
         print(f"⚠️ Error Interno Logic Alumno {alumno_id}: {e}")
@@ -218,7 +228,8 @@ def obtener_alumnos_con_solicitudes():
         
         resultados = []
         for alumno in alumnos:
-            ia_data = obtener_features_y_prediccion(alumno['alumno_id'])
+            # Pasamos clase_id para obtener riesgo específico de esta materia
+            ia_data = obtener_features_y_prediccion(alumno['alumno_id'], alumno['clase_id'])
             
             resultados.append({
                 "alumno_id": alumno['alumno_id'],
@@ -482,11 +493,13 @@ def obtener_alumnos_para_calificar(clase_id):
         alumnos_con_ia = []
         
         for alumno in alumnos:
-            # Ahora llamamos a la función mejorada con reglas de negocio
-            ia_data = obtener_features_y_prediccion(alumno['alumno_id'])
+            # --- CAMBIO IMPORTANTE ---
+            # Pasamos clase_id para que el riesgo se calcule SOBRE ESTA MATERIA
+            # Esto evita que alumnos con 7.1 aquí aparezcan como "Riesgo Moderado"
+            # por tener promedio 10 en otra materia.
+            ia_data = obtener_features_y_prediccion(alumno['alumno_id'], clase_id)
             
             alumno['ia_risk'] = ia_data.get('is_in_risk', 0)
-            # Pasamos la probabilidad como porcentaje (0-100)
             alumno['ia_prob'] = round(ia_data.get('risk_probability', 0.0) * 100, 1)
             alumno['ia_msg'] = ia_data.get('message', '')
 
