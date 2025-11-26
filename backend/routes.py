@@ -25,13 +25,12 @@ def calcular_distancia(lat1, lon1, lat2, lon2):
 def obtener_features_y_prediccion(alumno_id, clase_id=None):
     """
     Calcula métricas SQL y aplica REGLAS DE NEGOCIO.
-    AHORA FILTRA POR CLASE_ID SI SE PROPORCIONA para que coincida con la vista del profesor.
+    Filtra por materia pero permite evaluar riesgo académico aunque no haya asistencia.
     """
     conexion = obtener_conexion()
     cursor = conexion.cursor(dictionary=True)
     try:
         # 1. Ingeniería de características (SQL)
-        # Modificamos la query para filtrar por clase_id si existe
         if clase_id:
             query = """
                 SELECT
@@ -44,7 +43,6 @@ def obtener_features_y_prediccion(alumno_id, clase_id=None):
             """
             params = (alumno_id, clase_id, alumno_id, clase_id)
         else:
-            # Fallback a global si no hay clase (ej: vista general)
             query = """
                 SELECT
                     (SELECT AVG(calificacion) FROM calificaciones WHERE alumno_id = %s) as PreviousGrade,
@@ -59,23 +57,31 @@ def obtener_features_y_prediccion(alumno_id, clase_id=None):
         cursor.execute(query, params)
         stats = cursor.fetchone()
 
-        # CASO A: Sin datos suficientes -> Riesgo 0
-        if not stats or stats['TotalAsistencias'] == 0:
-            return {"is_in_risk": 0, "risk_probability": 0.0, "message": "Datos insuficientes", "status": "ok"}
+        # Si no hay stats (raro), salimos
+        if not stats:
+            return {"is_in_risk": 0, "risk_probability": 0.0, "message": "Sin datos", "status": "ok"}
         
-        # CASO B: Sin calificaciones -> Riesgo 0
+        # CASO: Sin calificaciones registradas -> Riesgo 0 (Regla de oro: sin nota no hay predicción)
         if stats['PreviousGrade'] is None:
              return {"is_in_risk": 0, "risk_probability": 0.0, "message": "Sin historial", "status": "ok"}
+
+        # Manejo seguro de asistencias (Evitar división por cero)
+        # Si no hay asistencias, asumimos tasas en 0, pero PERMITIMOS evaluar la calificación
+        total_asistencias = stats['TotalAsistencias']
+        if total_asistencias > 0:
+            tasa_retardos = stats['Retardos'] / total_asistencias
+            tasa_injustificadas = stats['Injustificadas'] / total_asistencias
+        else:
+            tasa_retardos = 0.0
+            tasa_injustificadas = 0.0
 
         # PREPARACIÓN DE DATOS
         raw_grade = float(stats['PreviousGrade'])
         
-        # Normalización de escala (0-10 -> 0-100 para IA)
-        grade_normalized = raw_grade * 10 if raw_grade <= 10.0 and raw_grade > 0 else raw_grade
-        # Escala visual (0-10) para lógica de negocio
+        # Normalización de escala para visualización y lógica
         grade_0_10 = raw_grade if raw_grade <= 10.0 else raw_grade / 10.0
 
-        print(f"🤖 Alumno {alumno_id} (Clase {clase_id}): Calif={grade_0_10:.2f}")
+        print(f"🤖 Alumno {alumno_id} (Clase {clase_id}): Calif={grade_0_10:.2f} | Asistencias={total_asistencias}")
 
         # --- CAPA DE LÓGICA DE NEGOCIO (PRIORIDAD ALTA) ---
         
@@ -228,7 +234,6 @@ def obtener_alumnos_con_solicitudes():
         
         resultados = []
         for alumno in alumnos:
-            # Pasamos clase_id para obtener riesgo específico de esta materia
             ia_data = obtener_features_y_prediccion(alumno['alumno_id'], alumno['clase_id'])
             
             resultados.append({
@@ -495,8 +500,6 @@ def obtener_alumnos_para_calificar(clase_id):
         for alumno in alumnos:
             # --- CAMBIO IMPORTANTE ---
             # Pasamos clase_id para que el riesgo se calcule SOBRE ESTA MATERIA
-            # Esto evita que alumnos con 7.1 aquí aparezcan como "Riesgo Moderado"
-            # por tener promedio 10 en otra materia.
             ia_data = obtener_features_y_prediccion(alumno['alumno_id'], clase_id)
             
             alumno['ia_risk'] = ia_data.get('is_in_risk', 0)
