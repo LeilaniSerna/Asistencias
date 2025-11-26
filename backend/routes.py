@@ -29,7 +29,6 @@ def obtener_features_y_prediccion(alumno_id):
     cursor = conexion.cursor(dictionary=True)
     try:
         # 1. Ingeniería de características (SQL)
-        # NOTA: Quitamos COALESCE de PreviousGrade para poder detectar cuando es NULL (sin calif)
         query = """
             SELECT
                 (SELECT AVG(calificacion) FROM calificaciones WHERE alumno_id = %s) as PreviousGrade,
@@ -46,7 +45,7 @@ def obtener_features_y_prediccion(alumno_id):
         if not stats or stats['TotalAsistencias'] == 0:
             return {"is_in_risk": 0, "risk_probability": 0.0, "message": "Falta asistencia", "status": "ok"}
 
-        # CASO 2: Sin calificaciones registradas -> No podemos predecir (NUEVO)
+        # CASO 2: Sin calificaciones registradas -> No podemos predecir
         if stats['PreviousGrade'] is None:
              return {"is_in_risk": 0, "risk_probability": 0.0, "message": "Sin calif.", "status": "ok"}
 
@@ -55,6 +54,7 @@ def obtener_features_y_prediccion(alumno_id):
         tasa_injustificadas = stats['Injustificadas'] / stats['TotalAsistencias']
         
         # CASO 3: Corrección de Escala (0-10 a 0-100)
+        # Multiplicamos por 10 si es menor o igual a 10 para que la IA entienda la escala correcta
         raw_grade = float(stats['PreviousGrade'])
         grade_for_ai = raw_grade * 10 if raw_grade <= 10.0 and raw_grade > 0 else raw_grade
 
@@ -69,8 +69,9 @@ def obtener_features_y_prediccion(alumno_id):
 
         # 2. Llamada a la API
         try:
-            # Timeout aumentado a 2s para dar margen a Render
-            response = requests.post(MODEL_API_URL, json=features, timeout=2) 
+            # CAMBIO CRÍTICO: Timeout aumentado a 10 segundos
+            # Esto permite que Render "despierte" del Cold Start sin dar error
+            response = requests.post(MODEL_API_URL, json=features, timeout=10) 
             
             if response.status_code == 200:
                 data = response.json()
@@ -468,6 +469,9 @@ def obtener_alumnos_para_calificar(clase_id):
         alumnos = cursor.fetchall()
         
         alumnos_con_ia = []
+        
+        # NOTA: La bandera de seguridad sigue aquí, pero como aumentamos el timeout
+        # a 10s en la función de IA, ya no debería activarse falsamente.
         ia_desactivada_por_fallo = False 
 
         for alumno in alumnos:
