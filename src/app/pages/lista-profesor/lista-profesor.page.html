@@ -1,5 +1,5 @@
 <ion-header>
-  <ion-toolbar color="success">
+  <ion-toolbar >
     <ion-buttons slot="start">
       <ion-back-button defaultHref="/materias-profesor"></ion-back-button>
     </ion-buttons>
@@ -22,73 +22,70 @@
       <table class="attendance-table">
         <thead>
           <tr>
-            <th width="35%">Alumno</th>
-            <th width="15%" style="text-align: center;">Riesgo IA</th> 
-            <th width="20%">Solicitud</th>
-            <th width="30%">Acciones</th>
+            <th width="40%">ALUMNO</th>
+            <th width="25%">ESTADO SOLICITUD</th>
+            <th width="35%">ACCIONES</th>
           </tr>
         </thead>
         <tbody>
           
-          <tr *ngFor="let alumno of alumnos" [ngClass]="{'risk-high': alumno.ia_risk === 1}">
+          <tr *ngFor="let alumno of alumnos">
             
-            <!-- Columna 1: Nombre -->
+            <!-- Columna 1: Alumno + Info Riesgo -->
             <td>
-              <span class="student-name">{{ alumno.nombre }}</span>
-              <span class="student-id">{{ alumno.matricula }}</span>
-              
-              <!-- Mensaje de IA sutil -->
-              <p class="ia-message" *ngIf="alumno.ia_risk === 1" title="{{ alumno.ia_msg }}">
-                <ion-icon name="alert-circle-outline"></ion-icon> ALTO RIESGO ({{ alumno.ia_prob }}%)
-              </p>
-            </td>
-            
-            <!-- Columna 2: Punto de Riesgo -->
-            <td style="text-align: center;">
-              <span class="risk-dot" 
-                    [ngClass]="{'high': alumno.ia_risk === 1, 'low': alumno.ia_risk === 0}"
-                    title="Probabilidad de deserción: {{ alumno.ia_prob }}%">
-              </span>
+              <div class="student-info">
+                <span class="student-name">{{ alumno.nombre }}</span>
+                <span class="student-id">{{ alumno.matricula }}</span>
+                
+                <!-- Alerta de Riesgo (Si aplica) -->
+                <div class="ia-message" *ngIf="alumno.ia_risk === 1">
+                  <ion-icon name="alert-circle-outline"></ion-icon> 
+                  ALTO RIESGO ({{ alumno.ia_prob }}%)
+                </div>
+              </div>
             </td>
 
-            <!-- Columna 3: Estado Solicitud -->
-            <td>
+            <!-- Columna 2: Estado Solicitud -->
+            <td style="text-align: left;">
               <span class="status-badge" [ngClass]="{
                 'pending': alumno.estado === 'Pendiente',
                 'accepted': alumno.estado === 'Aceptada',
                 'rejected': alumno.estado === 'Rechazada',
                 'none': alumno.estado !== 'Pendiente' && alumno.estado !== 'Aceptada' && alumno.estado !== 'Rechazada'
               }">
-                {{ alumno.estado === 'Sin solicitud' ? '-' : alumno.estado.toUpperCase() }}
+                {{ alumno.estado === 'Sin solicitud' ? 'Sin solicitud' : alumno.estado }}
               </span>
             </td>
 
-            <!-- Columna 4: Acciones -->
+            <!-- Columna 3: Acciones -->
             <td>
               <div class="actions-container">
                 
                 <!-- Caso: Solicitud Pendiente (Aceptar/Rechazar) -->
                 <ng-container *ngIf="alumno.estado === 'Pendiente'">
-                  <button class="btn btn-accept" (click)="aceptarSolicitud(alumno.solicitud_id)">
+                  <button class="btn btn-accept" (click)="aceptarSolicitud(alumno.solicitud_id)" title="Aceptar">
                     <ion-icon name="checkmark-outline"></ion-icon>
                   </button>
-                  <button class="btn btn-reject" (click)="rechazarSolicitud(alumno.solicitud_id)">
+                  <button class="btn btn-reject" (click)="rechazarSolicitud(alumno.solicitud_id)" title="Rechazar">
                     <ion-icon name="close-outline"></ion-icon>
                   </button>
                 </ng-container>
 
-                <!-- Caso: Sin Solicitud o Atendida (Registrar Manual) -->
+                <!-- Caso: Sin Solicitud o Ya Procesada -->
                 <ng-container *ngIf="alumno.estado !== 'Pendiente'">
-                  <button class="btn btn-manual" (click)="registrarAsistenciaManual(alumno)">Manual</button>
+                  <button class="btn btn-manual" (click)="registrarAsistenciaManual(alumno)">
+                    Registrar Asistencia
+                  </button>
                 </ng-container>
 
               </div>
             </td>
           </tr>
 
+          <!-- Mensaje Vacío -->
           <tr *ngIf="alumnos.length === 0">
-            <td colspan="4" style="text-align:center; padding: 2rem; color: #666;">
-              Cargando alumnos o no hay inscritos.
+            <td colspan="3" style="text-align:center; padding: 2rem; color: #777;">
+              Cargando alumnos o no hay inscritos en este grupo.
             </td>
           </tr>
 
