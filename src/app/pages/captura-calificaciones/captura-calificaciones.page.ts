@@ -22,8 +22,9 @@ interface AlumnoCalificacion {
   guardado: boolean;
   modificado?: boolean;
   // --- INTEGRACIÓN IA: Campos nuevos ---
-  ia_risk?: number; // 0 = Bajo Riesgo, 1 = Alto Riesgo
-  ia_msg?: string;  // Mensaje de detalle de la IA
+  ia_risk?: number; // 0 = Bajo, 1 = Moderado, 2 = Alto
+  ia_msg?: string;
+  ia_prob?: number; // Porcentaje de probabilidad
 }
 
 @Component({

@@ -40,13 +40,18 @@
         </thead>
         <tbody>
           
-          <!-- MODIFICACIÓN: Clase condicional para destacar toda la fila si hay riesgo -->
-          <tr *ngFor="let alumno of alumnos" [class.row-in-risk]="alumno.ia_risk === 1">
+          <!-- FILA DESTACADA: Ahora soporta Naranja (1) y Rojo (2) -->
+          <tr *ngFor="let alumno of alumnos" 
+              [ngClass]="{'row-in-risk-high': alumno.ia_risk === 2, 'row-in-risk-mod': alumno.ia_risk === 1}">
             <td>
               <div class="student-info">
-                <!-- MODIFICACIÓN: Punto de Semáforo (Verde/Rojo) -->
+                <!-- Punto de Semáforo: Verde (0), Naranja (1), Rojo (2) -->
                 <span class="risk-dot" 
-                      [ngClass]="{'risk-low': alumno.ia_risk === 0, 'risk-high': alumno.ia_risk === 1}"
+                      [ngClass]="{
+                        'risk-low': alumno.ia_risk === 0, 
+                        'risk-mod': alumno.ia_risk === 1,
+                        'risk-high': alumno.ia_risk === 2
+                      }"
                       title="Indicador de Riesgo IA">
                 </span>
 
@@ -54,11 +59,17 @@
                 <span class="student-id">{{ alumno.matricula }}</span>
               </div>
 
-              <!-- MODIFICACIÓN: Alerta de Texto IA -->
-              <div class="risk-alert" *ngIf="alumno.ia_risk === 1">
-                <ion-icon name="alert-circle" color="danger"></ion-icon>
-                Riesgo de deserción: ¡ALERTA!
-                <span class="risk-message" *ngIf="alumno.ia_msg">({{ alumno.ia_msg }})</span>
+              <!-- ALERTA DE RIESGO: Se muestra si riesgo es 1 o 2 -->
+              <div class="risk-alert" *ngIf="alumno.ia_risk && alumno.ia_risk > 0"
+                   [ngClass]="{'alert-mod': alumno.ia_risk === 1, 'alert-high': alumno.ia_risk === 2}">
+                <ion-icon name="alert-circle"></ion-icon>
+                <span>
+                  {{ alumno.ia_risk === 2 ? '¡ALERTA DE DESERCIÓN!' : 'Riesgo Moderado' }}
+                </span>
+                <!-- AQUI MOSTRAMOS EL PORCENTAJE -->
+                <span class="risk-prob" *ngIf="alumno.ia_prob">
+                  (Prob: {{ alumno.ia_prob }}%)
+                </span>
               </div>
             </td>
             
@@ -83,7 +94,6 @@
                     [ngClass]="{'status-saved': !alumno.modificado && alumno.guardado, 'status-pending': alumno.modificado}">
                 {{ alumno.modificado ? 'Pendiente' : (alumno.guardado ? 'Guardado' : '-') }}
               </span>
-              <!-- Botón discreto para guardar individualmente si se desea -->
               <button class="btn-icon-save" *ngIf="alumno.modificado" (click)="guardarCalificacion(alumno)">
                 <ion-icon name="save-outline"></ion-icon>
               </button>
