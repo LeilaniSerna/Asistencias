@@ -1,63 +1,206 @@
-ion-toolbar { box-shadow: none !important; }
-ion-header[translucent] { --background: #ffffff !important; --backdrop-filter: none !important; }
-ion-toolbar::part(background), .toolbar-background { background-color: #9fc34c !important; }
-ion-header { box-shadow: 0 2px 4px rgba(0,0,0,0.08) !important; }
-:host, ion-content { --background: rgb(251, 251, 251); background-color: rgb(255, 255, 255); }
-ion-header { --background: rgb(255, 255, 255); --color: #004aad; }
-ion-toolbar ion-title { font-weight: 600; font-size: 1.2rem; color: white; }
-
-h2 { text-align: center; margin: 1.5rem 0 0.75rem; font-size: 1.4rem; color: #004aad; font-weight: bold; }
-
-ion-card {
-  background: rgb(227, 227, 227); border-radius: 12px;
-  box-shadow: 0px 4px 10px rgba(0,0,0,0.1); margin: 0.5rem 0; color: #004aad;
-  ion-card-header { background: rgb(232, 232, 232); padding: 0.75rem 1rem;
-    ion-card-title { font-size: 1.1rem; color: #000; font-weight: bold; }
-    ion-card-subtitle { margin-top: 30px; font-size: 0.9rem; color: #000; opacity: 0.8; }
-  }
-  ion-card-content { padding: 0.75rem 1rem; p { font-size: 0.9rem; margin: 0.5rem 0; color: #000; strong { color: #252525; } } }
+:host {
+  --verde-utc: #9fc34c;
+  --azul-utc: #004aad;
+  --naranja-accion: #f05a22; /* Color naranja de la imagen */
+  --gris-disabled: #d8dadd;
+  --gris-fondo: #f9f9f9;
+  --rojo-falta: #e02e2e;
+  --verde-numero: #28a745;
 }
 
-ion-button.custom-asistencia-btn {
-  color: white !important; font-weight: bold !important; font-size: 14px !important;
-  background-color: #004aad !important; border-radius: 6px !important;
-  --background: #004aad !important; --padding-start: 0; --padding-end: 0;
-  margin-top: 0.75rem !important; width: 100% !important;
+/* --- HEADER PERSONALIZADO --- */
+.header-custom {
+  background-color: var(--verde-utc);
+  padding: 20px;
+  color: white;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+
+  .student-name {
+    font-size: 1.4rem;
+    font-weight: 700;
+    display: block;
+    margin-bottom: 2px;
+  }
+  .student-group {
+    font-size: 0.9rem;
+    opacity: 0.9;
+    font-weight: 500;
+  }
 }
 
-ion-input { border-radius: 8px; background-color: rgb(232, 232, 232); margin: 10px 0; --padding-start: 15px; }
-ion-note { display: block; margin-top: 0.5rem; font-size: 0.9rem; }
-ion-note[color='warning'] { --color: #ff6d4d !important; }
-ion-note[color='danger'] { --color: #eb445a !important; }
-ion-note[color='success'] { --color: #9fc34c !important; }
+ion-content {
+  --background: #ffffff;
+}
 
-/* ESTILOS NUEVOS */
-.empty-message { text-align: center; color: #666; padding: 1rem 0; }
-.summary-item { display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem; margin: 0.5rem 0; color: #000; }
-.summary-label { color: #252525; font-weight: bold; }
-.summary-value { font-weight: 600; color: #000; }
-.summary-value.value-danger { color: #eb445a !important; font-weight: 700; }
+.content-container {
+  padding: 20px;
+  max-width: 600px;
+  margin: 0 auto;
+}
 
-.academic-summary-card {
-  padding: 5px;
-  .progress-circle {
-    display: flex; justify-content: center; align-items: center;
-    width: 80px; height: 80px; border-radius: 50%;
-    border: 6px solid #9fc34c; background: #fff; margin: 0 auto 5px;
+/* --- TÍTULOS DE SECCIÓN --- */
+h2 {
+  text-align: center;
+  color: var(--azul-utc);
+  font-weight: 700;
+  font-size: 1.2rem;
+  margin: 20px 0 15px 0;
+}
+
+/* --- BOTONES DE MATERIAS --- */
+.subjects-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.subject-card {
+  width: 100%;
+  border-radius: 12px;
+  padding: 15px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: transform 0.1s;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  border: none;
+  text-align: left;
+
+  /* NOMBRE DE LA MATERIA */
+  .subject-name {
+    flex: 1;
   }
-  .progress-number { font-size: 1.8rem; font-weight: 700; color: #9fc34c; }
-  .progress-label { font-size: 0.8rem; color: #666; font-weight: 600; }
 
-  .highlight-card {
-    display: flex; align-items: center; padding: 8px; border-radius: 8px; margin-bottom: 8px; background-color: rgba(255, 255, 255, 0.6);
-    ion-icon { font-size: 1.5rem; margin-right: 10px; }
-    .highlight-text {
-      display: flex; flex-direction: column; width: 100%;
-      p { margin: 0; font-size: 0.75rem; color: #666; text-transform: uppercase; font-weight: bold; }
-      strong { font-size: 0.9rem; color: #222; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 110px; }
-      span { font-weight: 700; color: #000; }
+  /* ESTADO DE LA DERECHA */
+  .status-text {
+    font-size: 0.85rem;
+    font-weight: 400;
+    font-style: italic;
+  }
+
+  /* 1. ESTADO: ACTIVO (Naranja) */
+  &.active {
+    background-color: var(--naranja-accion);
+    color: white;
+    cursor: pointer;
+    &:active { transform: scale(0.98); }
+    box-shadow: 0 4px 10px rgba(240, 90, 34, 0.3);
+  }
+
+  /* 2. ESTADO: DESHABILITADO (Gris) */
+  &.disabled {
+    background-color: var(--gris-disabled);
+    color: #777;
+    pointer-events: none;
+    .status-text { color: #888; }
+  }
+
+  /* 3. ESTADO: ENVIADO/SUCCESS (Azul UTC) */
+  &.success {
+    background-color: var(--azul-utc);
+    color: white;
+    pointer-events: none;
+    .status-icon { font-size: 1.4rem; }
+  }
+}
+
+.helper-text {
+  text-align: center;
+  color: #999;
+  font-size: 0.8rem;
+  font-style: italic;
+  margin-top: 15px;
+  margin-bottom: 30px;
+}
+
+/* --- RESUMEN DE FALTAS --- */
+.summary-card {
+  background-color: #e9ecef; /* Gris azulado muy claro */
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.fault-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+  font-size: 0.95rem;
+  color: #333;
+
+  &:last-child { margin-bottom: 0; }
+
+  .fault-count {
+    font-weight: 700;
+    margin-right: 10px;
+    font-size: 1.1rem;
+    
+    &.danger { color: var(--rojo-falta); } /* Rojo para faltas */
+    &.safe { color: var(--verde-numero); } /* Verde si es 0 */
+  }
+
+  .fault-materia {
+    color: #444;
+    font-weight: 500;
+  }
+}
+
+/* --- PROMEDIO GENERAL --- */
+.average-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.circle-progress {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: conic-gradient(var(--verde-utc) 0%, var(--verde-utc) 90%, #e0e0e0 90%, #e0e0e0 100%);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 20px;
+
+  /* Círculo interior blanco */
+  &::before {
+    content: '';
+    position: absolute;
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background: white;
+  }
+
+  .grade-number {
+    position: relative;
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: var(--verde-utc);
+    z-index: 1;
+  }
+}
+
+.grades-list {
+  width: 100%;
+  border-top: 1px solid #eee;
+  padding-top: 10px;
+
+  .grade-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid #f5f5f5;
+    font-size: 0.95rem;
+
+    .grade-val {
+      font-weight: 700;
+      &.high { color: var(--verde-utc); }
+      &.med { color: var(--naranja-accion); }
+      &.low { color: var(--rojo-falta); }
     }
   }
-  .highlight-card.best { border-left: 4px solid #9fc34c; ion-icon { color: #9fc34c; } }
-  .highlight-card.worst { border-left: 4px solid #ffc409; ion-icon { color: #ffc409; } }
 }

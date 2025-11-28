@@ -12,19 +12,15 @@ import {
   IonCol,
   IonButton,
   IonCard,
-  IonCardHeader,
-  IonCardTitle,
   IonCardContent,
-  IonNote,
-  IonCardSubtitle,
-  IonIcon
-} from '@ionic/angular/standalone';
+  IonIcon,
+  IonSpinner, IonCardHeader, IonCardTitle } from '@ionic/angular/standalone';
 import { Geolocation } from '@capacitor/geolocation';
 import { addIcons } from 'ionicons';
-import { star, warning } from 'ionicons/icons';
+import { checkmarkCircle, closeCircle, time } from 'ionicons/icons';
 
-// Registrar iconos
-addIcons({ star, warning });
+// Registrar iconos necesarios
+addIcons({ checkmarkCircle, closeCircle, time });
 
 interface MateriaAlumno {
   clase_id: number;
@@ -32,7 +28,7 @@ interface MateriaAlumno {
   dia_semana: string;
   hora_inicio: string;
   hora_fin: string;
-  estado_solicitud: string;
+  estado_solicitud: string | null; // 'Pendiente', 'Aceptada', 'Rechazada' o null
   observaciones?: string;
   puede_solicitar: boolean;
 }
@@ -42,11 +38,7 @@ interface AsistenciaResumen {
   asistencias: number;
   faltas_justificadas: number;
   faltas_injustificadas: number;
-}
-
-interface CalificacionMateria {
-  nombre: string;
-  calificacion: number;
+  total_faltas: number; // Suma para mostrar el número rojo
 }
 
 @Component({
@@ -54,39 +46,29 @@ interface CalificacionMateria {
   templateUrl: './inicio-alumno.page.html',
   styleUrls: ['./inicio-alumno.page.scss'],
   standalone: true,
-  imports: [
-    IonCardSubtitle,
+  imports: [ 
     IonContent,
-    IonHeader,
-    IonTitle,
-    IonToolbar,
     CommonModule,
     FormsModule,
     HttpClientModule,
-    IonGrid,
-    IonRow,
-    IonCol,
-    IonButton,
-    IonCard,
-    IonCardHeader,
-    IonCardTitle,
-    IonCardContent,
-    IonNote,
     IonIcon,
+    IonSpinner,
     DecimalPipe
   ]
 })
 export class InicioAlumnoPage implements OnInit {
   alumnoId: number = 0;
-  nombreCompleto: string = '';
+  nombreCompleto: string = 'Cargando...';
   grupoNombre: string = '';
+  
   materias: MateriaAlumno[] = [];
   asistenciasResumen: AsistenciaResumen[] = [];
-
-  // Variables para el Resumen Académico
-  promedioGeneral: number | null = null;
-  materiaSobresaliente: CalificacionMateria | null = null;
-  materiaMejorar: CalificacionMateria | null = null;
+  
+  // Calificaciones
+  promedioGeneral: number = 0;
+  calificacionesDetalle: { nombre: string; calificacion: number }[] = [];
+  
+  loading: boolean = true;
 
   // URL de la API (Tu URL de Railway)
   private apiUrl = 'https://asistencias-production-7dba.up.railway.app';
@@ -107,67 +89,109 @@ export class InicioAlumnoPage implements OnInit {
       .subscribe({
         next: (res) => {
           this.alumnoId = res.alumno_id;
-          // Cargar toda la información una vez que tenemos el ID
-          this.obtenerDatosAlumno(this.alumnoId);
-          this.obtenerMaterias(this.alumnoId);
-          this.obtenerResumenAsistencias(this.alumnoId);
-          this.obtenerCalificaciones(this.alumnoId); // <--- ¡Llamada agregada!
+          this.cargarDatosDashboard();
         },
         error: (err) => {
           console.error('Error al obtener alumnoId:', err);
+          this.loading = false;
         }
       });
   }
 
-  obtenerDatosAlumno(alumnoId: number) {
-    this.http.get<any>(`${this.apiUrl}/alumno/${alumnoId}/info`).subscribe(response => {
-      this.nombreCompleto = `${response.nombre} ${response.apellido}`;
-      this.grupoNombre = response.grupo;
+  cargarDatosDashboard() {
+    this.loading = true;
+    // Carga paralela de datos para eficiencia
+    Promise.all([
+      this.obtenerDatosPersonales(),
+      this.obtenerMaterias(),
+      this.obtenerResumenAsistencias(),
+      this.obtenerCalificaciones()
+    ]).finally(() => {
+      this.loading = false;
     });
   }
 
-  obtenerMaterias(alumnoId: number) {
-    this.http.get<MateriaAlumno[]>(`${this.apiUrl}/alumno/${alumnoId}/materias`).subscribe(response => {
-      const ahora = new Date();
-      const diaActual = this.obtenerDiaSemana(ahora.getDay());
-      const horaActual = ahora.toTimeString().slice(0, 5);
-
-      this.materias = response.map(m => {
-        const dentroHorario =
-          m.dia_semana === diaActual &&
-          horaActual >= m.hora_inicio &&
-          horaActual <= m.hora_fin;
-
-        return {
-          ...m,
-          puede_solicitar: dentroHorario
-        };
+  obtenerDatosPersonales() {
+    return new Promise<void>(resolve => {
+      this.http.get<any>(`${this.apiUrl}/alumno/${this.alumnoId}/info`).subscribe({
+        next: (res) => {
+          this.nombreCompleto = `${res.nombre} ${res.apellido}`;
+          this.grupoNombre = res.grupo;
+          resolve();
+        },
+        error: () => resolve()
       });
     });
   }
 
-  obtenerResumenAsistencias(alumnoId: number) {
-    this.http.get<AsistenciaResumen[]>(`${this.apiUrl}/alumno/${alumnoId}/asistencias-resumen`).subscribe({
-      next: (res) => {
-        this.asistenciasResumen = res;
-      },
-      error: (err) => {
-        console.error('Error al obtener resumen de asistencias:', err);
-      }
+  obtenerMaterias() {
+    return new Promise<void>(resolve => {
+      this.http.get<MateriaAlumno[]>(`${this.apiUrl}/alumno/${this.alumnoId}/materias`).subscribe({
+        next: (response) => {
+          const ahora = new Date();
+          const diaActual = this.obtenerDiaSemana(ahora.getDay());
+          // Formato HH:MM para comparación
+          const horaActual = ahora.toTimeString().slice(0, 5); 
+
+          this.materias = response.map(m => {
+            // Lógica: Es hoy Y está dentro del rango de horas
+            const esHoy = m.dia_semana === diaActual;
+            const enHorario = horaActual >= m.hora_inicio && horaActual <= m.hora_fin;
+            
+            return {
+              ...m,
+              puede_solicitar: esHoy && enHorario
+            };
+          });
+          resolve();
+        },
+        error: () => resolve()
+      });
     });
   }
 
-  // --- FUNCIÓN NUEVA PARA CALIFICACIONES ---
-  obtenerCalificaciones(alumnoId: number) {
-    this.http.get<any>(`${this.apiUrl}/alumno/${alumnoId}/calificaciones-resumen`).subscribe({
-      next: (res) => {
-        this.promedioGeneral = res.promedio;
-        this.materiaSobresaliente = res.mejorMateria;
-        this.materiaMejorar = res.peorMateria;
-      },
-      error: (err) => {
-        console.error('Error al obtener calificaciones:', err);
-      }
+  obtenerResumenAsistencias() {
+    return new Promise<void>(resolve => {
+      this.http.get<any[]>(`${this.apiUrl}/alumno/${this.alumnoId}/asistencias-resumen`).subscribe({
+        next: (res) => {
+          this.asistenciasResumen = res.map(item => ({
+            ...item,
+            total_faltas: item.faltas_injustificadas + item.faltas_justificadas
+          }));
+          resolve();
+        },
+        error: () => resolve()
+      });
+    });
+  }
+
+  obtenerCalificaciones() {
+    return new Promise<void>(resolve => {
+      // Usamos el endpoint de resumen pero necesitamos la lista completa si es posible
+      // Si tu backend actual solo devuelve "mejor/peor", idealmente necesitamos todas.
+      // Por ahora, simularemos la lista con los datos que tenemos o asumiremos que el backend
+      // fue ajustado para devolver lista. Si no, ajusta el endpoint en routes.py para devolver todas.
+      
+      // NOTA: Asumiré que el endpoint `calificaciones-resumen` devuelve el promedio.
+      // Para la lista completa de calificaciones mostrada en la imagen, sería ideal un endpoint
+      // `/alumno/{id}/calificaciones-todas`. Si no existe, mostraré solo el promedio.
+      
+      this.http.get<any>(`${this.apiUrl}/alumno/${this.alumnoId}/calificaciones-resumen`).subscribe({
+        next: (res) => {
+          this.promedioGeneral = res.promedio || 0;
+          
+          // Construimos una lista básica para visualización basada en lo que devuelve la API
+          // Si quieres la lista completa de materias y notas, necesitaríamos modificar el backend.
+          // Por ahora usaré las materias destacadas para poblar la vista.
+          this.calificacionesDetalle = [];
+          if (res.mejorMateria) this.calificacionesDetalle.push(res.mejorMateria);
+          if (res.peorMateria && res.peorMateria.nombre !== res.mejorMateria?.nombre) {
+            this.calificacionesDetalle.push(res.peorMateria);
+          }
+          resolve();
+        },
+        error: () => resolve()
+      });
     });
   }
 
@@ -193,23 +217,18 @@ export class InicioAlumnoPage implements OnInit {
         longitud_usuario: coordinates.coords.longitude
       };
 
-      this.http.post(`${this.apiUrl}/alumno/enviar-solicitud`, payload).subscribe(
-        res => {
-          alert('Solicitud enviada correctamente');
-          this.obtenerMaterias(this.alumnoId);
+      this.http.post(`${this.apiUrl}/alumno/enviar-solicitud`, payload).subscribe({
+        next: () => {
+          // Recargar materias para actualizar estado a 'Pendiente'
+          this.obtenerMaterias();
         },
-        err => {
-          const errorMsg = err.error?.error || 'Error desconocido al enviar solicitud';
-          alert('No se pudo enviar la solicitud: ' + errorMsg);
-
-          if (errorMsg.toLowerCase().includes('pendiente')) {
-            this.obtenerMaterias(this.alumnoId);
-          }
+        error: (err) => {
+          const errorMsg = err.error?.error || 'Error desconocido';
+          alert('No se pudo enviar: ' + errorMsg);
         }
-      );
+      });
     } catch (error) {
-      console.error('Error al obtener ubicación:', error);
-      alert('No se pudo obtener la ubicación. Activa el GPS e inténtalo de nuevo.');
+      alert('Error de GPS. Activa tu ubicación.');
     }
   }
 }
