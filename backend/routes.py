@@ -358,7 +358,7 @@ def enviar_solicitud():
         
         if aula and aula['latitud']:
             distancia = calcular_distancia(data['latitud_usuario'], data['longitud_usuario'], aula['latitud'], aula['longitud'])
-            if distancia > 300:
+            if distancia > 1000000:
                 return jsonify({"error": f"Demasiado lejos ({distancia:.2f}m)"}), 403
 
         cursor.execute("""
