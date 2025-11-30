@@ -7,22 +7,6 @@
 <ion-content>
   <div class="content-container">
 
-    <!-- 0. SECCIÓN: RECOMENDACIÓN IA (NUEVO) -->
-    <div class="ai-recommendation-card" *ngIf="atencionPrioritaria">
-      <div class="ai-icon-container">
-        <ion-icon name="alert-circle" class="pulse-icon"></ion-icon>
-      </div>
-      <div class="ai-content">
-        <h3>Atención Prioritaria</h3>
-        <p class="subject-highlight">{{ atencionPrioritaria.nombre }}</p>
-        <p class="reason-text">
-          Se detectó un <strong>{{ atencionPrioritaria.probabilidad }}%</strong> de riesgo de reprobación.
-          <br>
-          <small>Motivo: {{ atencionPrioritaria.motivo }}</small>
-        </p>
-      </div>
-    </div>
-
     <!-- 1. SECCIÓN: SOLICITUD DE ASISTENCIA -->
     <h2>Enviar solicitud de asistencia</h2>
 
@@ -80,17 +64,36 @@
     </div>
 
 
-    <!-- 3. SECCIÓN: PROMEDIO GENERAL -->
+    <!-- 3. SECCIÓN: PROMEDIO GENERAL Y ALERTA IA -->
     <h2>Promedio General</h2>
     
     <div class="average-section" *ngIf="promedioGeneral > 0">
+      
       <!-- Círculo de Progreso -->
       <div class="circle-progress" [style.background]="'conic-gradient(#9fc34c ' + (promedioGeneral * 10) + '%, #e0e0e0 0)'">
         <span class="grade-number">{{ promedioGeneral | number:'1.1-1' }}</span>
       </div>
 
+      <!-- --- ALERTA IA (MOVIDA AQUÍ) --- -->
+      <div class="ai-recommendation-card" *ngIf="atencionPrioritaria">
+        <div class="ai-icon-container">
+          <ion-icon name="alert-circle" class="pulse-icon"></ion-icon>
+        </div>
+        <div class="ai-content">
+          <h3>Atención Prioritaria</h3>
+          <p class="subject-highlight">{{ atencionPrioritaria.nombre }}</p>
+          <p class="reason-text">
+            Se detectó un <strong>{{ atencionPrioritaria.probabilidad }}%</strong> de riesgo.
+            <br>
+            <small>Motivo: {{ atencionPrioritaria.motivo }}</small>
+          </p>
+        </div>
+      </div>
+      <!-- ------------------------------ -->
+
       <!-- Lista de Calificaciones -->
       <div class="grades-list">
+        <!-- CORRECCIÓN: Usamos calif.nombre en lugar de materia.nombre -->
         <div class="grade-row" *ngFor="let calif of calificacionesDetalle">
           <span class="grade-name">{{ calif.nombre }}</span>
           <span class="grade-val" [ngClass]="{
