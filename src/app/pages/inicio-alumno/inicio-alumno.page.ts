@@ -14,13 +14,14 @@ import {
   IonCard,
   IonCardContent,
   IonIcon,
-  IonSpinner, IonCardHeader, IonCardTitle } from '@ionic/angular/standalone';
+  IonSpinner
+} from '@ionic/angular/standalone';
 import { Geolocation } from '@capacitor/geolocation';
 import { addIcons } from 'ionicons';
-import { checkmarkCircle, closeCircle, time } from 'ionicons/icons';
+import { checkmarkCircle, closeCircle, time, warning, alertCircle } from 'ionicons/icons';
 
-// Registrar iconos necesarios
-addIcons({ checkmarkCircle, closeCircle, time });
+// Registrar todos los iconos usados
+addIcons({ checkmarkCircle, closeCircle, time, warning, alertCircle });
 
 interface MateriaAlumno {
   clase_id: number;
@@ -28,7 +29,7 @@ interface MateriaAlumno {
   dia_semana: string;
   hora_inicio: string;
   hora_fin: string;
-  estado_solicitud: string | null; // 'Pendiente', 'Aceptada', 'Rechazada' o null
+  estado_solicitud: string | null;
   observaciones?: string;
   puede_solicitar: boolean;
 }
@@ -38,7 +39,13 @@ interface AsistenciaResumen {
   asistencias: number;
   faltas_justificadas: number;
   faltas_injustificadas: number;
-  total_faltas: number; // Suma para mostrar el número rojo
+  total_faltas: number;
+}
+
+interface RecomendacionIA {
+  nombre: string;
+  motivo: string;
+  probabilidad: number;
 }
 
 @Component({
@@ -46,7 +53,7 @@ interface AsistenciaResumen {
   templateUrl: './inicio-alumno.page.html',
   styleUrls: ['./inicio-alumno.page.scss'],
   standalone: true,
-  imports: [ 
+  imports: [
     IonContent,
     CommonModule,
     FormsModule,
@@ -64,13 +71,12 @@ export class InicioAlumnoPage implements OnInit {
   materias: MateriaAlumno[] = [];
   asistenciasResumen: AsistenciaResumen[] = [];
   
-  // Calificaciones
   promedioGeneral: number = 0;
   calificacionesDetalle: { nombre: string; calificacion: number }[] = [];
+  atencionPrioritaria: RecomendacionIA | null = null;
   
   loading: boolean = true;
 
-  // URL de la API (Tu URL de Railway)
   private apiUrl = 'https://asistencias-production-7dba.up.railway.app';
 
   constructor(private http: HttpClient) {}
@@ -100,7 +106,6 @@ export class InicioAlumnoPage implements OnInit {
 
   cargarDatosDashboard() {
     this.loading = true;
-    // Carga paralela de datos para eficiencia
     Promise.all([
       this.obtenerDatosPersonales(),
       this.obtenerMaterias(),
@@ -130,11 +135,9 @@ export class InicioAlumnoPage implements OnInit {
         next: (response) => {
           const ahora = new Date();
           const diaActual = this.obtenerDiaSemana(ahora.getDay());
-          // Formato HH:MM para comparación
           const horaActual = ahora.toTimeString().slice(0, 5); 
 
           this.materias = response.map(m => {
-            // Lógica: Es hoy Y está dentro del rango de horas
             const esHoy = m.dia_semana === diaActual;
             const enHorario = horaActual >= m.hora_inicio && horaActual <= m.hora_fin;
             
@@ -167,30 +170,17 @@ export class InicioAlumnoPage implements OnInit {
 
   obtenerCalificaciones() {
     return new Promise<void>(resolve => {
-      // Usamos el endpoint de resumen pero necesitamos la lista completa si es posible
-      // Si tu backend actual solo devuelve "mejor/peor", idealmente necesitamos todas.
-      // Por ahora, simularemos la lista con los datos que tenemos o asumiremos que el backend
-      // fue ajustado para devolver lista. Si no, ajusta el endpoint en routes.py para devolver todas.
-      
-      // NOTA: Asumiré que el endpoint `calificaciones-resumen` devuelve el promedio.
-      // Para la lista completa de calificaciones mostrada en la imagen, sería ideal un endpoint
-      // `/alumno/{id}/calificaciones-todas`. Si no existe, mostraré solo el promedio.
-      
       this.http.get<any>(`${this.apiUrl}/alumno/${this.alumnoId}/calificaciones-resumen`).subscribe({
         next: (res) => {
           this.promedioGeneral = res.promedio || 0;
-          
-          // Construimos una lista básica para visualización basada en lo que devuelve la API
-          // Si quieres la lista completa de materias y notas, necesitaríamos modificar el backend.
-          // Por ahora usaré las materias destacadas para poblar la vista.
-          this.calificacionesDetalle = [];
-          if (res.mejorMateria) this.calificacionesDetalle.push(res.mejorMateria);
-          if (res.peorMateria && res.peorMateria.nombre !== res.mejorMateria?.nombre) {
-            this.calificacionesDetalle.push(res.peorMateria);
-          }
+          this.calificacionesDetalle = res.detalles || []; 
+          this.atencionPrioritaria = res.atencion_prioritaria || null; 
           resolve();
         },
-        error: () => resolve()
+        error: (err) => {
+          console.error('Error al obtener calificaciones:', err);
+          resolve();
+        }
       });
     });
   }
@@ -219,7 +209,7 @@ export class InicioAlumnoPage implements OnInit {
 
       this.http.post(`${this.apiUrl}/alumno/enviar-solicitud`, payload).subscribe({
         next: () => {
-          // Recargar materias para actualizar estado a 'Pendiente'
+          alert('Solicitud enviada correctamente');
           this.obtenerMaterias();
         },
         error: (err) => {

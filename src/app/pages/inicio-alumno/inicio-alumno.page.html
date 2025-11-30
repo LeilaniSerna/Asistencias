@@ -1,4 +1,4 @@
-<!-- HEADER PERSONALIZADO (Sin ion-header estándar para control total del color) -->
+<!-- HEADER PERSONALIZADO -->
 <div class="header-custom">
   <span class="student-name">{{ nombreCompleto }}</span>
   <span class="student-group">{{ grupoNombre }}</span>
@@ -7,12 +7,27 @@
 <ion-content>
   <div class="content-container">
 
+    <!-- 0. SECCIÓN: RECOMENDACIÓN IA (NUEVO) -->
+    <div class="ai-recommendation-card" *ngIf="atencionPrioritaria">
+      <div class="ai-icon-container">
+        <ion-icon name="alert-circle" class="pulse-icon"></ion-icon>
+      </div>
+      <div class="ai-content">
+        <h3>Atención Prioritaria</h3>
+        <p class="subject-highlight">{{ atencionPrioritaria.nombre }}</p>
+        <p class="reason-text">
+          Se detectó un <strong>{{ atencionPrioritaria.probabilidad }}%</strong> de riesgo de reprobación.
+          <br>
+          <small>Motivo: {{ atencionPrioritaria.motivo }}</small>
+        </p>
+      </div>
+    </div>
+
     <!-- 1. SECCIÓN: SOLICITUD DE ASISTENCIA -->
     <h2>Enviar solicitud de asistencia</h2>
 
     <div class="subjects-list">
       
-      <!-- Loop de Materias -->
       <div *ngFor="let materia of materias">
         
         <!-- ESTADO 1: YA ENVIADA (Azul) -->
@@ -53,7 +68,6 @@
     
     <div class="summary-card">
       <div class="fault-row" *ngFor="let item of asistenciasResumen">
-        <!-- Número en rojo si hay faltas, verde si es 0 -->
         <span class="fault-count" [ngClass]="item.total_faltas > 0 ? 'danger' : 'safe'">
           {{ item.total_faltas }}
         </span>

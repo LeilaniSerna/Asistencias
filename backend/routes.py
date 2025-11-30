@@ -60,9 +60,11 @@ def obtener_features_y_prediccion(alumno_id, clase_id=None):
         if not stats:
             return {"is_in_risk": 0, "risk_probability": 0.0, "message": "Sin datos", "status": "ok"}
         
+        # CASO: Sin calificaciones registradas -> Riesgo 0
         if stats['PreviousGrade'] is None:
              return {"is_in_risk": 0, "risk_probability": 0.0, "message": "Sin historial", "status": "ok"}
 
+        # Manejo seguro de asistencias
         total_asistencias = stats['TotalAsistencias']
         if total_asistencias > 0:
             tasa_retardos = stats['Retardos'] / total_asistencias
@@ -76,14 +78,22 @@ def obtener_features_y_prediccion(alumno_id, clase_id=None):
 
         print(f"🤖 Alumno {alumno_id} (Clase {clase_id}): Calif={grade_0_10:.2f} | Asistencias={total_asistencias}")
 
-        # REGLAS DE NEGOCIO
+        # REGLAS DE NEGOCIO (Prioridad sobre IA pura)
+        # Si la calificación es baja (<8), forzamos riesgo ALTO
         if grade_0_10 < 8.0:
             prob_simulada = random.uniform(0.80, 0.98)
             return {"is_in_risk": 2, "risk_probability": prob_simulada, "message": f"Promedio Crítico ({grade_0_10:.1f})", "status": "ok"}
+        
+        # Si la calificación es regular (8-8.9), riesgo MODERADO
         elif 8.0 <= grade_0_10 < 9.0:
             prob_simulada = random.uniform(0.45, 0.65)
             return {"is_in_risk": 1, "risk_probability": prob_simulada, "message": f"Riesgo Académico ({grade_0_10:.1f})", "status": "ok"}
+        
+        # Si la calificación es buena (>=9), revisamos FALTAS
         else:
+            if tasa_injustificadas > 0.20: # Más del 20% de faltas injustificadas
+                 return {"is_in_risk": 2, "risk_probability": 0.85, "message": "Exceso de Faltas", "status": "ok"}
+            
             return {"is_in_risk": 0, "risk_probability": random.uniform(0.05, 0.20), "message": "Buen Promedio", "status": "ok"}
 
     except Exception as e:
@@ -358,7 +368,7 @@ def enviar_solicitud():
         
         if aula and aula['latitud']:
             distancia = calcular_distancia(data['latitud_usuario'], data['longitud_usuario'], aula['latitud'], aula['longitud'])
-            if distancia > 1000000:
+            if distancia > 300:
                 return jsonify({"error": f"Demasiado lejos ({distancia:.2f}m)"}), 403
 
         cursor.execute("""
@@ -411,16 +421,15 @@ def resumen_asistencias_alumno(alumno_id):
     finally:
         cursor.close(); conexion.close()
 
-# --- CORRECCIÓN CRÍTICA: OBTENER TODAS LAS CALIFICACIONES Y PROMEDIO ---
+# --- ENDPOINT MEJORADO CON IA PREDICTIVA Y RECOMENDACIÓN ---
 @routes.route('/alumno/<int:alumno_id>/calificaciones-resumen', methods=['GET'])
 def obtener_calificaciones_resumen(alumno_id):
     conexion = obtener_conexion()
     cursor = conexion.cursor(dictionary=True)
     try:
-        # Se obtiene el listado completo de materias con su calificación para ese alumno
-        # Se corrigió el JOIN: calificaciones -> clases -> materias
+        # 1. Obtener todas las materias y calificaciones
         query = """
-            SELECT m.nombre AS materia, c.calificacion
+            SELECT m.nombre AS materia, c.calificacion, c.clase_id
             FROM calificaciones c
             JOIN clases cl ON c.clase_id = cl.id
             JOIN materias m ON cl.materia_id = m.id
@@ -431,74 +440,58 @@ def obtener_calificaciones_resumen(alumno_id):
 
         califs_validas = []
         detalles = []
+        
+        # Variables para determinar la materia con MAYOR riesgo
+        materia_atencion = None
+        max_probabilidad_riesgo = -1
 
         for r in resultados:
-            # Validar si existe calificación
             if r['calificacion'] is not None:
                 raw_grade = float(r['calificacion'])
-                # Normalizar si está en escala 0-100 a 0-10
                 final_grade = raw_grade if raw_grade <= 10.0 else raw_grade / 10.0
                 
                 califs_validas.append(final_grade)
+                
+                # --- INTEGRACIÓN IA PARA CADA MATERIA ---
+                # Consultamos el riesgo individual de esta materia para dar feedback
+                risk_data = obtener_features_y_prediccion(alumno_id, r['clase_id'])
+                prob_riesgo = risk_data.get('risk_probability', 0.0)
+                
                 detalles.append({
                     "nombre": r['materia'],
-                    "calificacion": round(final_grade, 1)
+                    "calificacion": round(final_grade, 1),
+                    "riesgo": risk_data.get('is_in_risk', 0), # 0=Bajo, 1=Mod, 2=Alto
+                    "probabilidad": prob_riesgo
                 })
 
-        # Calcular promedio general
+                # Buscamos la materia más crítica (Si tiene probabilidad de riesgo > 30%)
+                # Priorizamos las de riesgo Alto (2) y luego Moderado (1)
+                if prob_riesgo > max_probabilidad_riesgo and prob_riesgo > 0.3:
+                    max_probabilidad_riesgo = prob_riesgo
+                    
+                    # Generamos un motivo inteligente
+                    if final_grade < 8.0:
+                        motivo = "Bajo rendimiento académico"
+                    elif "Faltas" in risk_data.get('message', ''):
+                        motivo = "Exceso de inasistencias"
+                    else:
+                        motivo = "Riesgo detectado por IA"
+
+                    materia_atencion = {
+                        "nombre": r['materia'],
+                        "motivo": motivo,
+                        "probabilidad": round(prob_riesgo * 100, 1)
+                    }
+
         promedio = sum(califs_validas) / len(califs_validas) if califs_validas else 0.0
 
         return jsonify({
             "promedio": round(promedio, 1),
-            "detalles": detalles
+            "detalles": detalles,
+            "atencion_prioritaria": materia_atencion # Objeto o Null
         }), 200
     except Exception as e:
-        print("Error en calificaciones resumen:", e) # Log para Railway
-        return jsonify({"error": str(e)}), 500
-    finally:
-        cursor.close(); conexion.close()
-
-# --- RUTAS DE CAPTURA CALIFICACIONES (PROFESOR) ---
-
-@routes.route('/profesor/clase/<int:clase_id>/alumnos-calificaciones', methods=['GET'])
-def obtener_alumnos_para_calificar(clase_id):
-    periodo = request.args.get('periodo', 'Parcial 1')
-    conexion = obtener_conexion()
-    cursor = conexion.cursor(dictionary=True)
-    try:
-        query = """
-            SELECT 
-                a.id AS alumno_id, a.matricula, a.nombre, a.apellido,
-                c.calificacion, c.observaciones
-            FROM clase_alumnos ca
-            INNER JOIN alumnos a ON ca.alumno_id = a.id
-            LEFT JOIN calificaciones c 
-                ON c.alumno_id = a.id AND c.clase_id = ca.clase_id AND c.periodo = %s
-            WHERE ca.clase_id = %s
-            ORDER BY a.apellido, a.nombre
-        """
-        cursor.execute(query, (periodo, clase_id))
-        alumnos = cursor.fetchall()
-        
-        alumnos_con_ia = []
-        
-        for alumno in alumnos:
-            # Pasamos clase_id para que el riesgo se calcule SOBRE ESTA MATERIA
-            ia_data = obtener_features_y_prediccion(alumno['alumno_id'], clase_id)
-            
-            alumno['ia_risk'] = ia_data.get('is_in_risk', 0)
-            alumno['ia_prob'] = round(ia_data.get('risk_probability', 0.0) * 100, 1)
-            alumno['ia_msg'] = ia_data.get('message', '')
-
-            if alumno['calificacion'] is not None:
-                alumno['calificacion'] = float(alumno['calificacion'])
-            alumno['guardado'] = True if alumno['calificacion'] is not None else False
-            alumnos_con_ia.append(alumno)
-
-        return jsonify(alumnos_con_ia), 200
-    except Exception as e:
-        print("Error en calificaciones:", e)
-        traceback.print_exc()
+        print("Error en calificaciones resumen:", e)
         return jsonify({"error": str(e)}), 500
     finally:
         cursor.close(); conexion.close()
