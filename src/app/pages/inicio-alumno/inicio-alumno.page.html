@@ -11,44 +11,35 @@
     <h2>Enviar solicitud de asistencia</h2>
 
     <div class="subjects-list">
-      
       <div *ngFor="let materia of materias">
-        
-        <!-- ESTADO 1: YA ENVIADA (Azul) -->
         <button class="subject-card success" 
                 *ngIf="materia.estado_solicitud === 'Pendiente' || materia.estado_solicitud === 'Aceptada'">
           <span class="subject-name">{{ materia.nombre_materia }}</span>
           <ion-icon name="checkmark-circle" class="status-icon"></ion-icon>
         </button>
 
-        <!-- ESTADO 2: DISPONIBLE PARA ENVIAR (Naranja) -->
         <button class="subject-card active" 
                 *ngIf="!materia.estado_solicitud && materia.puede_solicitar"
                 (click)="enviarSolicitud(materia.clase_id)">
           <span class="subject-name">{{ materia.nombre_materia }}</span>
         </button>
 
-        <!-- ESTADO 3: NO DISPONIBLE (Gris) -->
         <div class="subject-card disabled" 
              *ngIf="!materia.estado_solicitud && !materia.puede_solicitar">
           <span class="subject-name">{{ materia.nombre_materia }}</span>
           <span class="status-text">No disponible</span>
         </div>
-
       </div>
 
-      <!-- Spinner si está cargando -->
       <div *ngIf="loading" style="text-align:center; padding: 20px;">
         <ion-spinner color="primary"></ion-spinner>
       </div>
-
     </div>
 
     <p class="helper-text">Solo puedes solicitar asistencia en el horario de clase.</p>
 
-
     <!-- 2. SECCIÓN: RESUMEN DE FALTAS -->
-    <h2>Resumen de faltas:</h2>
+    <h2>Resumen de faltas</h2>
     
     <div class="summary-card">
       <div class="fault-row" *ngFor="let item of asistenciasResumen">
@@ -63,7 +54,6 @@
       </p>
     </div>
 
-
     <!-- 3. SECCIÓN: PROMEDIO GENERAL Y ALERTA IA -->
     <h2>Promedio General</h2>
     
@@ -74,7 +64,7 @@
         <span class="grade-number">{{ promedioGeneral | number:'1.1-1' }}</span>
       </div>
 
-      <!-- --- ALERTA IA (MOVIDA AQUÍ) --- -->
+      <!-- ALERTA IA -->
       <div class="ai-recommendation-card" *ngIf="atencionPrioritaria">
         <div class="ai-icon-container">
           <ion-icon name="alert-circle" class="pulse-icon"></ion-icon>
@@ -89,13 +79,20 @@
           </p>
         </div>
       </div>
-      <!-- ------------------------------ -->
 
-      <!-- Lista de Calificaciones -->
-      <div class="grades-list">
-        <!-- CORRECCIÓN: Usamos calif.nombre en lugar de materia.nombre -->
-        <div class="grade-row" *ngFor="let calif of calificacionesDetalle">
-          <span class="grade-name">{{ calif.nombre }}</span>
+      <!-- FILTRO DE PARCIALES -->
+      <div class="period-selector-container" *ngIf="periodosDisponibles.length > 0">
+        <ion-segment [(ngModel)]="periodoSeleccionado" (ionChange)="filtrarCalificaciones()" scrollable mode="ios">
+          <ion-segment-button *ngFor="let p of periodosDisponibles" [value]="p">
+            <ion-label>{{ p }}</ion-label>
+          </ion-segment-button>
+        </ion-segment>
+      </div>
+
+      <!-- LISTA DE CALIFICACIONES (Filtrada) -->
+      <div class="grades-list" *ngIf="calificacionesFiltradas.length > 0">
+        <div class="grade-row" *ngFor="let calif of calificacionesFiltradas">
+          <span class="grade-name">{{ calif.materia }}</span>
           <span class="grade-val" [ngClass]="{
             'high': calif.calificacion >= 9, 
             'med': calif.calificacion >= 8 && calif.calificacion < 9,
@@ -105,6 +102,11 @@
           </span>
         </div>
       </div>
+      
+      <p *ngIf="periodosDisponibles.length === 0 && !loading" style="text-align:center; color:#999; margin-top:20px;">
+        Aún no hay calificaciones registradas.
+      </p>
+
     </div>
 
   </div>

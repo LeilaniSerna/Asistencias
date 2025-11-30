@@ -3,25 +3,14 @@ import { CommonModule, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpClientModule } from '@angular/common/http';
 import {
-  IonContent,
-  IonHeader,
-  IonTitle,
-  IonToolbar,
-  IonGrid,
-  IonRow,
-  IonCol,
-  IonButton,
-  IonCard,
-  IonCardContent,
-  IonIcon,
-  IonSpinner
+  IonContent, IonHeader, IonTitle, IonToolbar, IonGrid, IonRow, IonCol,
+  IonButton, IonCard, IonCardContent, IonIcon, IonSpinner, IonSegment, IonSegmentButton, IonLabel
 } from '@ionic/angular/standalone';
 import { Geolocation } from '@capacitor/geolocation';
 import { addIcons } from 'ionicons';
-import { checkmarkCircle, closeCircle, time, warning, alertCircle } from 'ionicons/icons';
+import { checkmarkCircle, closeCircle, time, warning, alertCircle, calendar } from 'ionicons/icons';
 
-// Registrar todos los iconos usados
-addIcons({ checkmarkCircle, closeCircle, time, warning, alertCircle });
+addIcons({ checkmarkCircle, closeCircle, time, warning, alertCircle, calendar });
 
 interface MateriaAlumno {
   clase_id: number;
@@ -48,19 +37,22 @@ interface RecomendacionIA {
   probabilidad: number;
 }
 
+interface HistorialItem {
+  materia: string;
+  periodo: string;
+  calificacion: number;
+  riesgo: number;
+}
+
 @Component({
   selector: 'app-inicio-alumno',
   templateUrl: './inicio-alumno.page.html',
   styleUrls: ['./inicio-alumno.page.scss'],
   standalone: true,
   imports: [
-    IonContent,
-    CommonModule,
-    FormsModule,
-    HttpClientModule,
-    IonIcon,
-    IonSpinner,
-    DecimalPipe
+    IonContent, CommonModule, FormsModule, HttpClientModule,
+    IonIcon, IonSpinner,
+    IonSegment, IonSegmentButton, IonLabel, DecimalPipe
   ]
 })
 export class InicioAlumnoPage implements OnInit {
@@ -71,9 +63,17 @@ export class InicioAlumnoPage implements OnInit {
   materias: MateriaAlumno[] = [];
   asistenciasResumen: AsistenciaResumen[] = [];
   
+  // Dashboard y Calificaciones
   promedioGeneral: number = 0;
-  calificacionesDetalle: { nombre: string; calificacion: number }[] = [];
   atencionPrioritaria: RecomendacionIA | null = null;
+  
+  // Historial Completo y Filtrado
+  historialCompleto: HistorialItem[] = [];
+  calificacionesFiltradas: HistorialItem[] = [];
+  
+  // Gestión de Periodos
+  periodosDisponibles: string[] = [];
+  periodoSeleccionado: string = '';
   
   loading: boolean = true;
 
@@ -173,8 +173,19 @@ export class InicioAlumnoPage implements OnInit {
       this.http.get<any>(`${this.apiUrl}/alumno/${this.alumnoId}/calificaciones-resumen`).subscribe({
         next: (res) => {
           this.promedioGeneral = res.promedio || 0;
-          this.calificacionesDetalle = res.detalles || []; 
           this.atencionPrioritaria = res.atencion_prioritaria || null; 
+          this.historialCompleto = res.historial_completo || [];
+          
+          // Extraer periodos únicos y ordenar
+          const periodosSet = new Set(this.historialCompleto.map(h => h.periodo));
+          this.periodosDisponibles = Array.from(periodosSet).sort();
+
+          // Seleccionar por defecto el último periodo (el más reciente o mayor)
+          if (this.periodosDisponibles.length > 0) {
+            this.periodoSeleccionado = this.periodosDisponibles[this.periodosDisponibles.length - 1]; // Último
+            this.filtrarCalificaciones();
+          }
+          
           resolve();
         },
         error: (err) => {
@@ -183,6 +194,17 @@ export class InicioAlumnoPage implements OnInit {
         }
       });
     });
+  }
+
+  // Función llamada cuando cambia el Segment
+  filtrarCalificaciones() {
+    if (this.periodoSeleccionado) {
+      this.calificacionesFiltradas = this.historialCompleto.filter(
+        h => h.periodo === this.periodoSeleccionado
+      );
+    } else {
+      this.calificacionesFiltradas = [];
+    }
   }
 
   obtenerDiaSemana(dia: number): string {

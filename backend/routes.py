@@ -76,24 +76,14 @@ def obtener_features_y_prediccion(alumno_id, clase_id=None):
         raw_grade = float(stats['PreviousGrade'])
         grade_0_10 = raw_grade if raw_grade <= 10.0 else raw_grade / 10.0
 
-        print(f"🤖 Alumno {alumno_id} (Clase {clase_id}): Calif={grade_0_10:.2f} | Asistencias={total_asistencias}")
-
-        # REGLAS DE NEGOCIO (Prioridad sobre IA pura)
-        # Si la calificación es baja (<8), forzamos riesgo ALTO
+        # REGLAS DE NEGOCIO
         if grade_0_10 < 8.0:
             prob_simulada = random.uniform(0.80, 0.98)
             return {"is_in_risk": 2, "risk_probability": prob_simulada, "message": f"Promedio Crítico ({grade_0_10:.1f})", "status": "ok"}
-        
-        # Si la calificación es regular (8-8.9), riesgo MODERADO
         elif 8.0 <= grade_0_10 < 9.0:
             prob_simulada = random.uniform(0.45, 0.65)
             return {"is_in_risk": 1, "risk_probability": prob_simulada, "message": f"Riesgo Académico ({grade_0_10:.1f})", "status": "ok"}
-        
-        # Si la calificación es buena (>=9), revisamos FALTAS
         else:
-            if tasa_injustificadas > 0.20: # Más del 20% de faltas injustificadas
-                 return {"is_in_risk": 2, "risk_probability": 0.85, "message": "Exceso de Faltas", "status": "ok"}
-            
             return {"is_in_risk": 0, "risk_probability": random.uniform(0.05, 0.20), "message": "Buen Promedio", "status": "ok"}
 
     except Exception as e:
@@ -421,27 +411,27 @@ def resumen_asistencias_alumno(alumno_id):
     finally:
         cursor.close(); conexion.close()
 
-# --- ENDPOINT MEJORADO CON IA PREDICTIVA Y RECOMENDACIÓN ---
+# --- ENDPOINT MEJORADO: HISTORIAL COMPLETO Y ALERTA IA ---
 @routes.route('/alumno/<int:alumno_id>/calificaciones-resumen', methods=['GET'])
 def obtener_calificaciones_resumen(alumno_id):
     conexion = obtener_conexion()
     cursor = conexion.cursor(dictionary=True)
     try:
-        # 1. Obtener todas las materias y calificaciones
+        # 1. Obtener TODAS las calificaciones con su periodo (Para el historial completo)
         query = """
-            SELECT m.nombre AS materia, c.calificacion, c.clase_id
+            SELECT m.nombre AS materia, c.calificacion, c.periodo, c.clase_id, c.fecha_registro
             FROM calificaciones c
             JOIN clases cl ON c.clase_id = cl.id
             JOIN materias m ON cl.materia_id = m.id
             WHERE c.alumno_id = %s
+            ORDER BY c.fecha_registro DESC
         """
         cursor.execute(query, (alumno_id,))
         resultados = cursor.fetchall()
 
         califs_validas = []
-        detalles = []
+        historial_completo = []
         
-        # Variables para determinar la materia con MAYOR riesgo
         materia_atencion = None
         max_probabilidad_riesgo = -1
 
@@ -452,31 +442,24 @@ def obtener_calificaciones_resumen(alumno_id):
                 
                 califs_validas.append(final_grade)
                 
-                # --- INTEGRACIÓN IA PARA CADA MATERIA ---
-                # Consultamos el riesgo individual de esta materia para dar feedback
+                # Integración de IA para evaluar cada materia (y detectar riesgo)
                 risk_data = obtener_features_y_prediccion(alumno_id, r['clase_id'])
                 prob_riesgo = risk_data.get('risk_probability', 0.0)
                 
-                detalles.append({
-                    "nombre": r['materia'],
+                # Agregamos al historial completo
+                historial_completo.append({
+                    "materia": r['materia'],
+                    "periodo": r['periodo'], # Ej: 'Parcial 1', 'Parcial 2'
                     "calificacion": round(final_grade, 1),
-                    "riesgo": risk_data.get('is_in_risk', 0), # 0=Bajo, 1=Mod, 2=Alto
-                    "probabilidad": prob_riesgo
+                    "riesgo": risk_data.get('is_in_risk', 0),
+                    "probabilidad": prob_riesgo,
+                    "fecha": str(r['fecha_registro'])
                 })
 
-                # Buscamos la materia más crítica (Si tiene probabilidad de riesgo > 30%)
-                # Priorizamos las de riesgo Alto (2) y luego Moderado (1)
+                # Lógica para encontrar la materia de MAYOR RIESGO
                 if prob_riesgo > max_probabilidad_riesgo and prob_riesgo > 0.3:
                     max_probabilidad_riesgo = prob_riesgo
-                    
-                    # Generamos un motivo inteligente
-                    if final_grade < 8.0:
-                        motivo = "Bajo rendimiento académico"
-                    elif "Faltas" in risk_data.get('message', ''):
-                        motivo = "Exceso de inasistencias"
-                    else:
-                        motivo = "Riesgo detectado por IA"
-
+                    motivo = "Bajo rendimiento" if final_grade < 8.0 else "Exceso de faltas"
                     materia_atencion = {
                         "nombre": r['materia'],
                         "motivo": motivo,
@@ -487,8 +470,8 @@ def obtener_calificaciones_resumen(alumno_id):
 
         return jsonify({
             "promedio": round(promedio, 1),
-            "detalles": detalles,
-            "atencion_prioritaria": materia_atencion # Objeto o Null
+            "atencion_prioritaria": materia_atencion,
+            "historial_completo": historial_completo # <-- Enviamos TODO para filtrar en Frontend
         }), 200
     except Exception as e:
         print("Error en calificaciones resumen:", e)
