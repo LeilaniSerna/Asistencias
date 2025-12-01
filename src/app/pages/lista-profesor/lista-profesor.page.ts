@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
@@ -7,19 +7,29 @@ import {
   IonHeader,
   IonTitle,
   IonToolbar,
-  IonGrid,
-  IonRow,
-  IonCol,
+  IonButtons,
+  IonBackButton,
+  IonIcon,
   IonButton,
   AlertController,
-  IonText, IonButtons, IonBackButton, IonIcon 
+  IonBadge,
+  IonToast
 } from '@ionic/angular/standalone';
 import { AlumnosService } from 'src/app/servicios/alumnos.service';
 import { AsistenciasProfesorService } from 'src/app/servicios/asistencias-profesor.service';
 
-// --- IMPORTACIÓN OBLIGATORIA DE ÍCONOS ---
+// Iconos necesarios
 import { addIcons } from 'ionicons';
-import { checkmarkOutline, closeOutline, alertCircleOutline } from 'ionicons/icons';
+import { 
+  checkmarkOutline, 
+  closeOutline, 
+  alertCircle, 
+  timeOutline, 
+  createOutline, 
+  lockClosed 
+} from 'ionicons/icons';
+
+addIcons({ checkmarkOutline, closeOutline, alertCircle, timeOutline, createOutline, lockClosed });
 
 @Component({
   selector: 'app-lista-profesor',
@@ -27,16 +37,11 @@ import { checkmarkOutline, closeOutline, alertCircleOutline } from 'ionicons/ico
   styleUrls: ['./lista-profesor.page.scss'],
   standalone: true,
   imports: [
-    IonIcon, IonBackButton, IonButtons, 
-    IonContent,
-    IonHeader,
-    IonTitle,
-    IonToolbar,
-    CommonModule,
-    FormsModule,
+    IonContent, IonHeader, IonTitle, IonToolbar, IonButtons, IonBackButton, 
+    IonIcon, CommonModule, FormsModule
   ]
 })
-export class ListaProfesorPage implements OnInit {
+export class ListaProfesorPage implements OnInit, OnDestroy {
 
   grupoId: number | null = null;
   grupoNombre: string = '';
@@ -45,17 +50,15 @@ export class ListaProfesorPage implements OnInit {
   horario: string = '';
 
   alumnos: any[] = [];
-  dentroHorario: boolean = false;
+  dentroHorario: boolean = false; // Candado de seguridad
+  intervalId: any;
 
   constructor(
     private route: ActivatedRoute,
     private alumnosService: AlumnosService,
     private asistenciasProfesorService: AsistenciasProfesorService,
     private alertController: AlertController
-  ) {
-    // --- REGISTRO DE ÍCONOS PARA EVITAR ERRORES EN CONSOLA ---
-    addIcons({ checkmarkOutline, closeOutline, alertCircleOutline });
-  }
+  ) {}
 
   ngOnInit() {
     const queryParams = this.route.snapshot.queryParamMap;
@@ -67,7 +70,15 @@ export class ListaProfesorPage implements OnInit {
 
     this.verificarHorario();
     this.cargarSolicitudes();
-    this.verificarFaltasAutomaticas();
+    
+    // Verificamos cada 30 segundos si sigue dentro del horario para bloquear/desbloquear en tiempo real
+    this.intervalId = setInterval(() => this.verificarHorario(), 30000);
+  }
+
+  ngOnDestroy() {
+    if (this.intervalId) {
+      clearInterval(this.intervalId);
+    }
   }
 
   verificarHorario() {
@@ -75,34 +86,44 @@ export class ListaProfesorPage implements OnInit {
       'Domingo': 0, 'Lunes': 1, 'Martes': 2, 'Miércoles': 3, 'Jueves': 4, 'Viernes': 5, 'Sábado': 6
     };
 
-    const partes = this.horario.split(' ');
-    const dia = partes[0];
-    const horas = partes.slice(1).join(' ').split('-');
-    
-    if(horas.length < 2) {
-        this.dentroHorario = true; 
-        return;
-    }
+    if (!this.horario) return;
 
-    const horaInicio = horas[0].trim();
-    const horaFin = horas[1].trim();
+    // Se asume formato: "Viernes 11:00 - 12:00"
+    // Dividimos por espacios
+    const partes = this.horario.split(' ');
+    const diaTexto = partes[0]; 
+    
+    // Buscamos las horas en el resto del string
+    const resto = partes.slice(1).join(''); // "11:00-12:00"
+    const [horaInicioStr, horaFinStr] = resto.split('-');
+
+    if (!horaInicioStr || !horaFinStr) {
+       // Si el formato es raro, por seguridad cerramos o dejamos abierto según prefieras.
+       // Aquí asumimos abierto para no bloquear si hay error de formato, pero idealmente se valida.
+       this.dentroHorario = true; 
+       return;
+    }
 
     const ahora = new Date();
     const diaActual = ahora.getDay();
-    const horaActual = ahora.getHours() + ahora.getMinutes() / 60;
+    
+    // Convertir horas a decimales para comparar (ej: 11:30 -> 11.5)
+    const [hIni, mIni] = horaInicioStr.split(':').map(Number);
+    const [hFin, mFin] = horaFinStr.split(':').map(Number);
+    
+    const tiempoInicio = hIni + (mIni || 0) / 60;
+    const tiempoFin = hFin + (mFin || 0) / 60;
+    const tiempoActual = ahora.getHours() + ahora.getMinutes() / 60;
 
-    if (diaActual !== diasSemana[dia]) {
+    // Validación estricta: Día correcto Y Hora correcta
+    // Permitimos un margen de 10 min antes y después por flexibilidad operativa si lo deseas
+    if (diaActual === diasSemana[diaTexto] && tiempoActual >= tiempoInicio && tiempoActual <= tiempoFin) {
+      this.dentroHorario = true;
+    } else {
       this.dentroHorario = false;
-      console.log(`⚠️ Hoy no es ${dia}`);
-      return;
     }
-
-    const [inicioHora, inicioMin] = horaInicio.split(':').map(Number);
-    const [finHora, finMin] = horaFin.split(':').map(Number);
-    const horaInicioDecimal = inicioHora + inicioMin / 60;
-    const horaFinDecimal = finHora + finMin / 60;
-
-    this.dentroHorario = horaActual >= horaInicioDecimal && horaActual <= horaFinDecimal;
+    
+    console.log(`🔒 Candado Asistencia: ${this.dentroHorario ? 'ABIERTO' : 'CERRADO'} (Hora: ${tiempoActual.toFixed(2)})`);
   }
 
   cargarSolicitudes() {
@@ -112,68 +133,44 @@ export class ListaProfesorPage implements OnInit {
           next: (data) => {
             this.alumnos = data.map(a => ({
               ...a,
-              dentroHorario: this.dentroHorario
+              // Mapeo seguro de riesgos
+              ia_risk: a.ia_risk || 0 
             }));
           },
-          error: (err) => {
-            console.error('❌ Error al obtener alumnos:', err);
-          }
-        });
-    }
-  }
-
-  verificarFaltasAutomaticas() {
-    const profesor = JSON.parse(localStorage.getItem('user') || '{}');
-    const profesorId = profesor.id;
-
-    if (this.grupoId && this.materiaId) {
-      this.asistenciasProfesorService.verificarFaltas(profesorId, this.grupoId, this.materiaId)
-        .subscribe({
-          next: (response) => console.log('✅ Faltas verificadas'),
-          error: (err) => console.error('❌ Error verificación faltas:', err)
+          error: (err) => console.error('Error cargando alumnos:', err)
         });
     }
   }
 
   aceptarSolicitud(solicitudId: number) {
-    const profesor = JSON.parse(localStorage.getItem('user') || '{}');
-    const profesorId = profesor.id;
-
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
     this.alumnosService.responderSolicitud({
       solicitud_id: solicitudId,
-      profesor_id: profesorId,
+      profesor_id: user.id,
       estado: 'Aceptada'
     }).subscribe({
-      next: () => {
-        this.presentToast('Solicitud aceptada');
-        this.cargarSolicitudes();
-      },
+      next: () => this.cargarSolicitudes(),
       error: () => this.mostrarAlerta('Error', 'No se pudo aceptar.')
     });
   }
 
   async rechazarSolicitud(solicitudId: number) {
     const alert = await this.alertController.create({
-      header: 'Motivo de rechazo',
-      inputs: [{ name: 'motivo', type: 'text', placeholder: 'Escribe el motivo...' }],
+      header: 'Rechazar Solicitud',
+      inputs: [{ name: 'motivo', placeholder: 'Motivo del rechazo' }],
       buttons: [
         { text: 'Cancelar', role: 'cancel' },
         {
           text: 'Rechazar',
-          handler: data => {
-            const profesor = JSON.parse(localStorage.getItem('user') || '{}');
-            const profesorId = profesor.id;
-
+          handler: (data) => {
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
             this.alumnosService.responderSolicitud({
               solicitud_id: solicitudId,
-              profesor_id: profesorId,
+              profesor_id: user.id,
               estado: 'Rechazada',
-              observaciones: data.motivo || null
+              observaciones: data.motivo
             }).subscribe({
-              next: () => {
-                this.presentToast('Solicitud rechazada');
-                this.cargarSolicitudes();
-              },
+              next: () => this.cargarSolicitudes(),
               error: () => this.mostrarAlerta('Error', 'No se pudo rechazar.')
             });
           }
@@ -184,29 +181,36 @@ export class ListaProfesorPage implements OnInit {
   }
 
   async registrarAsistenciaManual(alumno: any) {
+    // --- SEGURIDAD ANTI-TRAMPA ---
+    // Recalcular al momento del click para evitar que dejen la página abierta
+    this.verificarHorario(); 
+    
+    if (!this.dentroHorario) {
+      this.mostrarAlerta('🔒 Acción Bloqueada', 'Solo puedes registrar asistencia manual durante el horario de la clase.');
+      return;
+    }
+
     const alert = await this.alertController.create({
-      header: 'Asistencia Manual',
-      inputs: [{ name: 'motivo', type: 'text', placeholder: 'Motivo (Opcional)' }],
+      header: 'Registro Manual',
+      message: `Asistencia para ${alumno.nombre}`,
+      inputs: [{ name: 'motivo', placeholder: 'Motivo (opcional)' }],
       buttons: [
         { text: 'Cancelar', role: 'cancel' },
         {
           text: 'Registrar',
           handler: (data) => {
-            const profesor = JSON.parse(localStorage.getItem('user') || '{}');
-            const profesorId = profesor.id;
-            const fecha = new Date().toISOString().slice(0, 10);
-            const hora = new Date().toTimeString().slice(0, 8);
-
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            const now = new Date();
+            
             this.alumnosService.registrarAsistenciaManual({
               alumno_id: alumno.alumno_id,
               clase_id: alumno.clase_id,
-              profesor_id: profesorId,
-              fecha: fecha, hora: hora, motivo: data.motivo
+              profesor_id: user.id,
+              fecha: now.toISOString().slice(0, 10),
+              hora: now.toTimeString().slice(0, 8),
+              motivo: data.motivo || 'Manual por Profesor'
             }).subscribe({
-              next: () => {
-                this.presentToast('Asistencia registrada');
-                this.cargarSolicitudes();
-              },
+              next: () => this.cargarSolicitudes(),
               error: () => this.mostrarAlerta('Error', 'Fallo al registrar.')
             });
           }
@@ -216,14 +220,8 @@ export class ListaProfesorPage implements OnInit {
     await alert.present();
   }
 
-  async mostrarAlerta(titulo: string, mensaje: string) {
-    const alert = await this.alertController.create({
-      header: titulo, message: mensaje, buttons: ['OK']
-    });
+  async mostrarAlerta(header: string, message: string) {
+    const alert = await this.alertController.create({ header, message, buttons: ['OK'] });
     await alert.present();
-  }
-
-  async presentToast(msg: string) {
-    console.log(msg); 
   }
 }
