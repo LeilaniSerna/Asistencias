@@ -1,23 +1,62 @@
-<ion-content [fullscreen]="true" class="login-container">
-  <div class="login-card">
-    <img src="assets/icon/logo.png" class="logo" alt="Logo">
+<ion-content>
+  <div class="login-wrapper">
+    
+    <!-- HEADER: Solo Logo Grande -->
+    <div class="login-header">
+      <div class="logo-container">
+        <!-- El logo ya trae las letras, así que lo mostramos grande -->
+        <img src="assets/icon/logo.png" alt="Logo UTC">
+      </div>
+    </div>
 
-    <ion-input
-      placeholder="Usuario"
-      type="email"
-      [(ngModel)]="correo"
-      label="Correo:"
-      labelPlacement="floating"
-    ></ion-input>
+    <!-- FORMULARIO -->
+    <div class="login-form">
+      
+      <!-- Input Correo -->
+      <div class="input-group">
+        <label>Correo Electrónico</label>
+        <div class="custom-input">
+          <ion-icon name="at-outline" class="input-icon"></ion-icon>
+          <input 
+            type="email" 
+            [(ngModel)]="correo" 
+            placeholder="alan.saucedo@universidad.com"
+            (keyup.enter)="onLogin()">
+        </div>
+      </div>
 
-    <ion-input
-      placeholder="Contraseña"
-      type="password"
-      [(ngModel)]="contrasena"
-      label="Contraseña:"
-      labelPlacement="floating"
-    ></ion-input>
+      <!-- Input Contraseña -->
+      <div class="input-group">
+        <label>Contraseña</label>
+        <div class="custom-input">
+          <ion-icon name="lock-closed-outline" class="input-icon"></ion-icon>
+          <input 
+            type="password" 
+            [(ngModel)]="contrasena" 
+            placeholder="••••••••"
+            (keyup.enter)="onLogin()">
+        </div>
+      </div>
 
-    <ion-button expand="block" (click)="onLogin()">Iniciar sesión</ion-button>
+      <!-- Botón Iniciar Sesión (Letras Blancas) -->
+      <ion-button expand="block" class="login-btn" (click)="onLogin()" [disabled]="loading">
+        <span *ngIf="!loading" class="btn-text">INICIAR SESIÓN</span>
+        <ion-icon *ngIf="!loading" name="arrow-forward-outline" slot="end"></ion-icon>
+        <ion-spinner *ngIf="loading" name="crescent"></ion-spinner>
+      </ion-button>
+
+      <!-- Divisor Footer -->
+      <div class="divider-container">
+        <div class="line"></div>
+        <span class="divider-text">Sistema de Asistencia</span>
+        <div class="line"></div>
+      </div>
+
+      <!-- Link Soporte -->
+      <div class="footer-link">
+        ¿Problemas para acceder? <a href="#">Contactar Soporte</a>
+      </div>
+
+    </div>
   </div>
 </ion-content>

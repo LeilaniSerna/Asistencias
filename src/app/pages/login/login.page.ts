@@ -1,10 +1,19 @@
 import { Component } from '@angular/core';
-import { IonContent, IonInput, IonButton } from '@ionic/angular/standalone';
+import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { 
+  IonContent, 
+  IonButton, 
+  IonIcon,
+  IonSpinner
+} from '@ionic/angular/standalone';
 import { AuthService } from '../../servicios/auth.service';
-import { InicioProfesorPage } from "../inicio-profesor/inicio-profesor.page";
-import { InicioAlumnoPage } from '../inicio-alumno/inicio-alumno.page';
+import { addIcons } from 'ionicons';
+import { atOutline, lockClosedOutline, arrowForwardOutline } from 'ionicons/icons';
+
+// Registrar iconos
+addIcons({ atOutline, lockClosedOutline, arrowForwardOutline });
 
 @Component({
   selector: 'app-login',
@@ -12,32 +21,36 @@ import { InicioAlumnoPage } from '../inicio-alumno/inicio-alumno.page';
   styleUrls: ['login.page.scss'],
   standalone: true,
   imports: [
-    IonButton,
-    IonInput,
     IonContent,
+    IonButton,
+    IonIcon,
+    IonSpinner,
+    CommonModule,
     FormsModule,
   ]
 })
 export class LoginPage {
   correo: string = '';
   contrasena: string = '';
+  loading: boolean = false; // Para mostrar spinner en el botón
 
   constructor(private authService: AuthService, private router: Router) {}
 
   onLogin() {
-    console.log('Botón presionado');
-    console.log('Datos enviados:', { correo: this.correo, contrasena: this.contrasena });
+    if (!this.correo || !this.contrasena) {
+      alert('Por favor ingresa correo y contraseña');
+      return;
+    }
 
-    (document.activeElement as HTMLElement)?.blur(); // Quitar foco del input
+    this.loading = true;
+    (document.activeElement as HTMLElement)?.blur(); // Ocultar teclado
 
     this.authService.login(this.correo, this.contrasena).subscribe({
       next: (response) => {
+        this.loading = false;
         console.log('Login exitoso', response);
-
-        // Guardar usuario en localStorage
         localStorage.setItem('user', JSON.stringify(response));
 
-        // Redirigir según rol
         switch (response.rol_id) {
           case 1:
             this.router.navigate(['/inicioad']);
@@ -50,37 +63,18 @@ export class LoginPage {
             break;
           default:
             alert('Rol no válido');
-            this.router.navigate(['/login']);
         }
       },
       error: (error) => {
+        this.loading = false;
         console.error('Error en login:', error);
+        
+        let mensaje = 'Error desconocido';
+        if (error.status === 0) mensaje = 'Error de conexión con el servidor.';
+        else if (error.status === 401) mensaje = 'Credenciales incorrectas.';
+        else if (error.error?.error) mensaje = error.error.error;
 
-        // Detectar si es error de red (el servidor no responde)
-        if (error.status === 0) {
-          alert('❌ Error de conexión con el servidor\n\nVerifica si la IP es correcta y si tu servidor Flask está encendido.');
-          return;
-        }
-
-        // Si el backend respondió con mensaje de error
-        const mensajeBackend = error?.error?.error || error?.message || 'Error desconocido';
-
-        switch (error.status) {
-          case 400:
-            alert(`⚠️ Solicitud inválida: ${mensajeBackend}`);
-            break;
-          case 401:
-            alert(`🔒 Acceso denegado: ${mensajeBackend}`);
-            break;
-          case 404:
-            alert(`❌ No encontrado: ${mensajeBackend}`);
-            break;
-          case 500:
-            alert(`💥 Error interno en el servidor: ${mensajeBackend}`);
-            break;
-          default:
-            alert(`❗ Error inesperado (status ${error.status}): ${mensajeBackend}`);
-        }
+        alert(mensaje);
       }
     });
   }
