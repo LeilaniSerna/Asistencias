@@ -1,4 +1,6 @@
-# --- PYTHON (BACKEND) ---
+# ==============================
+# PYTHON / BACKEND
+# ==============================
 __pycache__/
 *.py[cod]
 *$py.class
@@ -6,41 +8,84 @@ venv/
 env/
 .env
 backend/venv/
+pycache/
 
-# --- NODE / IONIC (FRONTEND) ---
+# ==============================
+# NODE / IONIC / ANGULAR (FRONTEND)
+# ==============================
+# Dependencias
 node_modules/
+package-lock.json
+
+# Compilación y Build
 /www
-/platforms
-/plugins
 /dist
-/tmp
 /out-tsc
-/.angular
+/tmp
+
+# Cachés y Configuración de Frameworks
 /.angular/cache
+/.angular
 /.ionic
 .sass-cache/
 
-# --- ANDROID (CAPACITOR/CORDOVA) ---
-# Archivos generados de Android que no deben subirse
+# Ionic / Cordova / Capacitor específicos
+/platforms
+/plugins
+
+# ==============================
+# MOBILE (ANDROID / IOS)
+# ==============================
+# --- Android ---
+# Archivos generados y de compilación
 *.apk
 *.aab
 *.dex
 *.class
 /android/app/build/
 /android/.gradle/
-local.properties
 .cxx/
 captures/
+# Configuración local (contiene claves o rutas locales)
+local.properties
 
-# --- IDEs y EDITORES ---
+# --- iOS ---
+ios/App/App/public/
+
+# ==============================
+# IDEs y EDITORES
+# ==============================
 .vscode/
 .idea/
 *.swp
 *.swo
+
+# ==============================
+# SISTEMA OPERATIVO Y LOGS
+# ==============================
+# Archivos de sistema (Mac/Windows)
 .DS_Store
 Thumbs.db
 
-# --- SISTEMA Y LOGS ---
+# Logs de errores y depuración
 *.log
 npm-debug.log
 yarn-error.log
+
+
+
+
+android/app/src/main/assets/public/
+android/app/src/main/assets/capacitor.config.json
+android/app/src/main/assets/capacitor.plugins.json
+
+
+# --- CAPACITOR ANDROID ASSETS 
+android/app/src/main/assets/public/
+android/app/src/main/assets/capacitor.config.json
+android/app/src/main/assets/capacitor.plugins.json
+
+# --- CAPACITOR ANDROID ASSETS 
+android/app/src/main/assets/public/
+android/app/src/main/assets/capacitor.config.json
+android/app/src/main/assets/capacitor.plugins.json
