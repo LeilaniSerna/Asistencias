@@ -1,18 +1,16 @@
 from flask import Flask
 from flask_cors import CORS
 from routes import routes
+import os
 
 app = Flask(__name__)
 
-# Configuración correcta de CORS
+# --- CONFIGURACIÓN CORS PERMISIVA ---
+# "origins": "*" permite que tu celular (Android) o la web se conecten
+# desde cualquier red (Datos móviles, WiFi pública, etc.) sin bloqueos.
 CORS(app, resources={
     r"/*": {
-        "origins": [
-            "http://localhost:8100",            # App en desarrollo (Ionic)
-            "https://asistencias-beta.vercel.app",  # Frontend en producción
-            "http://localhost",                 # Android (Capacitor)
-            "capacitor://localhost"             # iOS (Capacitor)
-        ],
+        "origins": "*",
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         "allow_headers": ["Content-Type", "Authorization"],
         "supports_credentials": True
@@ -23,4 +21,6 @@ CORS(app, resources={
 app.register_blueprint(routes)
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    # Railway usa la variable de entorno PORT, si no existe usa 5000
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port, debug=True)
