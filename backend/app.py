@@ -9,7 +9,9 @@ CORS(app, resources={
     r"/*": {
         "origins": [
             "http://localhost:8100",            # App en desarrollo (Ionic)
-            "https://asistencias-beta.vercel.app"  # Frontend en producción
+            "https://asistencias-beta.vercel.app",  # Frontend en producción
+            "http://localhost",                 # Android (Capacitor)
+            "capacitor://localhost"             # iOS (Capacitor)
         ],
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         "allow_headers": ["Content-Type", "Authorization"],
