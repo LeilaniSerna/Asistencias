@@ -77,6 +77,7 @@ export class InicioAlumnoPage implements OnInit {
   
   loading: boolean = true;
 
+  // URL ORIGINAL (sin importar environment para evitar errores)
   private apiUrl = 'https://asistencias-production-7dba.up.railway.app';
 
   constructor(private http: HttpClient) {}
@@ -135,14 +136,33 @@ export class InicioAlumnoPage implements OnInit {
         next: (response) => {
           const ahora = new Date();
           const diaActual = this.obtenerDiaSemana(ahora.getDay());
+          // Hora actual siempre tiene 2 dígitos (ej: "09:30")
           const horaActual = ahora.toTimeString().slice(0, 5); 
 
           this.materias = response.map(m => {
+            // --- INICIO CORRECCIÓN DE HORA ---
+            // Convertimos a string por seguridad
+            let hInicio = m.hora_inicio ? m.hora_inicio.toString() : '';
+            let hFin = m.hora_fin ? m.hora_fin.toString() : '';
+
+            // Si la base de datos devuelve "6:00", le agregamos el cero -> "06:00"
+            if (hInicio.indexOf(':') === 1) hInicio = '0' + hInicio;
+            if (hFin.indexOf(':') === 1) hFin = '0' + hFin;
+
+            // Aseguramos formato HH:MM (quitamos segundos si sobran)
+            hInicio = hInicio.substring(0, 5);
+            hFin = hFin.substring(0, 5);
+            // --- FIN CORRECCIÓN DE HORA ---
+
             const esHoy = m.dia_semana === diaActual;
-            const enHorario = horaActual >= m.hora_inicio && horaActual <= m.hora_fin;
+            
+            // Ahora comparamos "09:00" con "06:00" correctamente
+            const enHorario = horaActual >= hInicio && horaActual <= hFin;
             
             return {
               ...m,
+              hora_inicio: hInicio, // Guardamos la hora corregida
+              hora_fin: hFin,       // Guardamos la hora corregida
               puede_solicitar: esHoy && enHorario
             };
           });
@@ -176,13 +196,11 @@ export class InicioAlumnoPage implements OnInit {
           this.atencionPrioritaria = res.atencion_prioritaria || null; 
           this.historialCompleto = res.historial_completo || [];
           
-          // Extraer periodos únicos y ordenar
           const periodosSet = new Set(this.historialCompleto.map(h => h.periodo));
           this.periodosDisponibles = Array.from(periodosSet).sort();
 
-          // Seleccionar por defecto el último periodo (el más reciente o mayor)
           if (this.periodosDisponibles.length > 0) {
-            this.periodoSeleccionado = this.periodosDisponibles[this.periodosDisponibles.length - 1]; // Último
+            this.periodoSeleccionado = this.periodosDisponibles[this.periodosDisponibles.length - 1]; 
             this.filtrarCalificaciones();
           }
           
@@ -196,7 +214,6 @@ export class InicioAlumnoPage implements OnInit {
     });
   }
 
-  // Función llamada cuando cambia el Segment
   filtrarCalificaciones() {
     if (this.periodoSeleccionado) {
       this.calificacionesFiltradas = this.historialCompleto.filter(
